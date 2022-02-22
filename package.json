@@ -1,24 +1,35 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "description": "Nodejs REST API with Express and Passport",
+  "description": "REST API using Node, Express, Passport and MonoDB",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/server.js"
   },
-  "author": "Ed Bradbury",
-  "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.0.1",
     "cors": "^2.8.5",
     "express": "^4.17.2",
+    "express-mysql-session": "^2.1.7",
     "express-sanitizer": "^1.0.6",
     "express-session": "^1.17.2",
     "express-validator": "^6.14.0",
+    "mysql": "^2.18.1",
     "passport": "^0.5.2"
   },
   "engines": {
     "node": "17.4.0",
     "npm": "8.3.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edwardsbradbury/homework-hero-api.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/edwardsbradbury/homework-hero-api/issues"
+  },
+  "homepage": "https://github.com/edwardsbradbury/homework-hero-api#readme"
 }
