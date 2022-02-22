@@ -41,7 +41,11 @@ module.exports = function(app) {
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route to receive login credentials from frontend, check them against the database and send result back to frontend
-	app.post('/login', [check('username').matches(usernameRegex).withMessage('usernameInvalid')], [check('password').isStrongPassword().withMessage('passwordInvalid')], [check('userType').isAlpha().withMessage('generalError')], function (req, res) {
+	app.post('/login',
+		[check('email').matches(emailRegex).withMessage('emailInvalid')],
+		[check('password').isStrongPassword().withMessage('passwordInvalid')],
+		[check('userType').isAlpha().withMessage('generalError')],
+		function (req, res) {
 		
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
@@ -52,14 +56,14 @@ module.exports = function(app) {
 			res.send(errMessages);
 		} else {
 			// Store the credentials sent from frontend. See comment above bodyParser in server/src/app.js for more info about how data is passed from frontend
-            const username = req.sanitize(req.body.username);
-            const password = req.sanitize(req.body.password);
+      const email = req.sanitize(req.body.email);
+      const password = req.sanitize(req.body.password);
 			const userType = req.sanitize(req.body.userType);
-            // Construct SQL 'prepared statement' to search the database for a record with matching email address
-			const sqlQuery = 'SELECT * FROM users WHERE username = ?;';
+      // Construct SQL 'prepared statement' to search the database for a record with matching email address
+			const sqlQuery = 'SELECT * FROM users WHERE email = ?;';
 		
 			// Execute the SQL query to retrieve matching record (if there is one)
-		 	db.query(sqlQuery, [username], (err, result) => {
+		 	db.query(sqlQuery, [email], (err, result) => {
 			 	if (err) {
 			 		res.send(['generalError']);
 		 		// If the result variable is empty, no records were found in the database with matching username
@@ -112,13 +116,20 @@ module.exports = function(app) {
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route to receive registration form data, sanitize it, then post it to the database
 
-	app.post('/register', [check('first').matches(nameRegEx).withMessage('firstNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')], [check('last').matches(nameRegEx).withMessage('lastNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')], [check('age').isInt({min: 18, max: 100}).withMessage('ageInvalid')], [check('username').matches(usernameRegex).withMessage('usernameInvalid').isLength({min: 8, max: 25}).withMessage('usernameInvalid')], [check('email').matches(emailRegEx).withMessage('emailInvalid').isLength({max: 100}).withMessage('emailLength')], [check('password').isStrongPassword().withMessage('passwordStrength').isLength({max: 20}).withMessage('passwordLength')], [check('userLang').matches(userLangRegex).withMessage('generalError')], function (req, res) {
+	app.post('/register',
+		[check('first').matches(nameRegEx).withMessage('firstNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
+		[check('last').matches(nameRegEx).withMessage('lastNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
+		[check('dob').isDate().withMessage('dobInvalid')],
+		[check('email1').matches(emailRegEx).withMessage('emailInvalid').isLength({max: 100}).withMessage('email1Length')],
+		[check('email2').matches(emailRegEx).withMessage('emailInvalid').isLength({max: 100}).withMessage('email2Length')],
+		[check('password').isStrongPassword().withMessage('passwordStrength').isLength({max: 20}).withMessage('passwordLength')],
+		function (req, res) {
 
 		/* Whether the Express validator raised any errors (invalid names, email or password) determines whether the form data is posted to database or not.
 			If not, error prompts will be sent back to frontend to be displayed to user. Although data is validated before sending from frontend, we still need to
 			validate it again because somebody could change it in-transit (using browser developer tools) and potentially crash the server or get access to the db */
-        const errors = validationResult(req);
-		if (!errors.isEmpty() || !(req.body.userType === 'parent' || req.body.userType === 'tutor')) {
+    const errors = validationResult(req);
+		if (!errors.isEmpty() || !(req.body.userType === 'client' || req.body.userType === 'tutor')) {
 			let errMessages = [];
 			for (let anError of errors.errors) {
 				errMessages.push(anError.msg);
@@ -126,7 +137,7 @@ module.exports = function(app) {
 			if (req.body.password !== req.body.confirm) {
 				errMessages.push('mismatchedPasswords');
 			}
-			if (!(req.body.userType === 'parent' || req.body.userType === 'tutor')) {
+			if (!(req.body.userType === 'client' || req.body.userType === 'tutor')) {
 				errMessages.push('generalError');
 			}
 			res.send(errMessages);
@@ -134,7 +145,7 @@ module.exports = function(app) {
 			// Form input all passed the validation checks
 
 			// Check there's not already a user record in db with the email address (we don't want duplicate accounts)
-			const checkAlreadyExists = 'SELECT username FROM users WHERE username = ?;';
+			const checkAlreadyExists = 'SELECT email FROM users WHERE email = ?;';
 			const username = req.sanitize(req.body.username);
 
 			db.query(checkAlreadyExists, [username], (error, result) => {
