@@ -39,88 +39,15 @@ module.exports = function(app) {
 	})
 	
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Route to receive login credentials from frontend, check them against the database and send result back to frontend
-	app.post('/login',
-		[check('email').matches(emailRegex).withMessage('emailInvalid')],
-		[check('password').isStrongPassword().withMessage('passwordInvalid')],
-		[check('userType').isAlpha().withMessage('generalError')],
-		function (req, res) {
-		
-		const errors = validationResult(req);
-		if (!errors.isEmpty()) {
-			let errMessages = [];
-            for (let anError of errors.errors) {
-                errMessages.push(anError.msg);
-            }
-			res.send(errMessages);
-		} else {
-			// Store the credentials sent from frontend. See comment above bodyParser in server/src/app.js for more info about how data is passed from frontend
-      const email = req.sanitize(req.body.email);
-      const password = req.sanitize(req.body.password);
-			const userType = req.sanitize(req.body.userType);
-      // Construct SQL 'prepared statement' to search the database for a record with matching email address
-			const sqlQuery = 'SELECT * FROM users WHERE email = ?;';
-		
-			// Execute the SQL query to retrieve matching record (if there is one)
-		 	db.query(sqlQuery, [email], (err, result) => {
-			 	if (err) {
-			 		res.send(['generalError']);
-		 		// If the result variable is empty, no records were found in the database with matching username
-			 	} else if (result.length < 1) {
-			 		res.send(['userNotFound']);
-		 		} else {
-			 	// Check the password from the matching db record
-		 			const passwordFromRecord = result[0].password;
-			 		bcrypt.compare(password, passwordFromRecord, function (error, passResult) {
-						if (error) {
-			 				res.send(['generalError']);
-			 			} else if (passResult === false) {
-			 				// Passwords didn't match - send failure message back to frontend
-			 				res.send(['passwordRejected']);
-			 			} else {
-							
-							/* Frontend UI makes user choose whether they're a parent or tutor before they see the login/register options. If the userType
-								they selected before login doesn't match the userType stored in their record in the database, login succeeds and also
-								sends back the correct userType, so frontend can update the userType of the current user to reflect their account type */
-							if (result[0].userType !== userType) {
-								// Try to create a login session (valid for 24 hours without having to login again)
-								req.login(result[0], function (anErr) {
-									if (anErr) {
-										return res.send(['generalError'])
-									} else {
-										// Send success message back to frontend
-										res.send(['success', result[0].userType, result[0].id]);
-									}
-								})
-							/* Userype selected on Index of frontend UI - & sent with login request - matches userType on record, so only need to send the
-								user's userId to frontend */
-							} else {
-								req.login(result[0], function(anErr) {
-									if (anErr) {
-										res.send(['generalError'])
-									} else {
-										// Send success message back to frontend
-										res.send(['success', result[0].id]);
-									}
-								})
-							}
-			 			}
-			 		})
-		 		}
-			})
-		
-		}
-	})
-
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route to receive registration form data, sanitize it, then post it to the database
 
 	app.post('/register',
+		[check('userType').isAlpha().isLength({max: 6}).withMessage('generalError')],
 		[check('first').matches(nameRegEx).withMessage('firstNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
 		[check('last').matches(nameRegEx).withMessage('lastNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
-		[check('dob').isDate().withMessage('dobInvalid')],
 		[check('email1').matches(emailRegEx).withMessage('emailInvalid').isLength({max: 100}).withMessage('email1Length')],
+		[check('dob').isDate().withMessage('dobInvalid')],
 		[check('email2').matches(emailRegEx).withMessage('emailInvalid').isLength({max: 100}).withMessage('email2Length')],
 		[check('password').isStrongPassword().withMessage('passwordStrength').isLength({max: 20}).withMessage('passwordLength')],
 		function (req, res) {
@@ -137,51 +64,50 @@ module.exports = function(app) {
 			if (req.body.password !== req.body.confirm) {
 				errMessages.push('mismatchedPasswords');
 			}
-			if (!(req.body.userType === 'client' || req.body.userType === 'tutor')) {
-				errMessages.push('generalError');
-			}
+			// if (!(req.body.userType === 'client' || req.body.userType === 'tutor')) {
+			// 	errMessages.push('generalError');
+			// }
 			res.send(errMessages);
 		} else {
 			// Form input all passed the validation checks
 
 			// Check there's not already a user record in db with the email address (we don't want duplicate accounts)
-			const checkAlreadyExists = 'SELECT email FROM users WHERE email = ?;';
-			const username = req.sanitize(req.body.username);
+			const checkAlreadyExists = 'SELECT email1 FROM users WHERE email1 = ?;';
+			const email1 = req.sanitize(req.body.email1);
 
-			db.query(checkAlreadyExists, [username], (error, result) => {
+			db.query(checkAlreadyExists, [email1], (error, result) => {
 				if (error) {
 		 			res.send(['generalError']);
 				// If there's a result from the database, we know there's already a user account with that username
 		 		} else if (result.length > 0) {
 		 			// Send message back to frontend
-		 			res.send(['usernameDuplicate']);
+		 			res.send(['duplicateUser']);
 				
 		 		// At this point, form input passed validation & username isn't already associated wtih an account
 		 		} else {
 
 		 			// Store the form data from the frontend registration form
+					const userType = req.sanitize(req.body.userType);
 		 			const first = req.sanitize(req.body.first);
 		 			const last = req.sanitize(req.body.last);
-					const age = req.sanitize(req.body.age);
-					const email = req.sanitize(req.body.email);
+					const dob = req.sanitize(req.body.dob);
+					const email2 = req.sanitize(req.body.email2);
 		 			const password = req.sanitize(req.body.password);
-					const userType = req.sanitize(req.body.userType);
-					const userLang = req.sanitize(req.body.userLang);
 
 		 			// Create SQL query string
-		 			let sqlQuery = 'INSERT INTO users (first, last, age, username, email, password, userType, userLang) VALUES (?, ?, ?, ?, ?, ?, ?, ?);';
+		 			let sqlQuery = 'INSERT INTO users (userType, first, last, email1, dob, email2, password) VALUES (?, ?, ?, ?, ?, ?, ?);';
 
 		 			// Hash the password, then connect to the database and insert new user record in database
 		 			bcrypt.hash(password, saltRounds, function(err, hashedPassword) {
 		 				if (err) res.send(['generalError']);
 		 				else {
-							const newRecord = [first, last, age, username, email, hashedPassword, userType, userLang];
+							const newRecord = [userType, first, last, email1, dob, email2, hashedPassword];
 		 					db.query(sqlQuery, newRecord, (someErr, result) => {
 		 						if (someErr) {
 		 							res.send(['generalError']);
 		 						} else {
 									// Need to get the id property of the record just created & return to frontend with sucsess
-									db.query('SELECT * FROM users WHERE username = ?', [username], (anError, user) => {
+									db.query('SELECT * FROM users WHERE email1 = ?', [email1], (anError, user) => {
 										if (anError) {
 											res.send(['generalError']);
 										} else {
@@ -204,7 +130,63 @@ module.exports = function(app) {
 			})
 		}
 
-    })
+  })
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Route to receive login credentials from frontend, check them against the database and send result back to frontend
+	app.post('/login',
+		[check('email').matches(emailRegex).withMessage('emailInvalid')],
+		[check('password').isStrongPassword().withMessage('passwordInvalid')],
+		function (req, res) {
+		
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			let errMessages = [];
+            for (let anError of errors.errors) {
+                errMessages.push(anError.msg);
+            }
+			res.send(errMessages);
+		} else {
+			// Store the credentials sent from frontend. See comment above bodyParser in server/src/app.js for more info about how data is passed from frontend
+      const email = req.sanitize(req.body.email);
+      const password = req.sanitize(req.body.password);
+      // Construct SQL 'prepared statement' to search the database for a record with matching email address
+			const sqlQuery = 'SELECT * FROM users WHERE email = ?;';
+		
+			// Execute the SQL query to retrieve matching record (if there is one)
+		 	db.query(sqlQuery, [email], (err, result) => {
+			 	if (err) {
+			 		res.send(['generalError']);
+		 		// If the result variable is empty, no records were found in the database with matching username
+			 	} else if (result.length < 1) {
+			 		res.send(['userNotFound']);
+		 		} else {
+			 	// Check the password from the matching db record
+		 			const passwordFromRecord = result[0].password;
+			 		bcrypt.compare(password, passwordFromRecord, function (error, passResult) {
+						if (error) {
+			 				res.send(['generalError']);
+			 			} else if (passResult === false) {
+			 				// Passwords didn't match - send failure message back to frontend
+			 				res.send(['passwordRejected']);
+			 			} else {
+							req.login(result[0], function(anErr) {
+								if (anErr) {
+									res.send(['generalError'])
+								} else {
+									// Send success message back to frontend
+									res.send(['success', result[0].id, result[0].userType, result[0].first, result[0].last]);
+								}
+							})
+						}
+			 		})
+		 		}
+			})
+		
+		}
+	})
+
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Logout route/endpoint
@@ -217,233 +199,234 @@ module.exports = function(app) {
 		res.send();
 	})
 
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Process new Requests for help (validate, sanitize and push to database)
 
-	app.post('/new-request', isAuth, [check('userId').isInt({min:1}).withMessage('generalError')], [check('username').matches(usernameRegex).withMessage('generalError').isLength({min: 8, max: 25}).withMessage('generalError')], [check('userLang').matches(userLangRegex).withMessage('generalError')], [check('subject').matches(subjectRegex).withMessage('subjectInvalid')], [check('studyLevel').matches(studyLevelRegex).withMessage('studyLevelInvalid')], [check('dueDate').isDate().withMessage('generalError')], [check('request').isLength({max: 750}).withMessage('requestLength')], [check('datePosted').isDate().withMessage('generalError')], [check('timePosted').matches(timeFormatRegex).withMessage('generalError')], function (req, res) {
+	// app.post('/new-request', isAuth, [check('userId').isInt({min:1}).withMessage('generalError')], [check('username').matches(usernameRegex).withMessage('generalError').isLength({min: 8, max: 25}).withMessage('generalError')], [check('userLang').matches(userLangRegex).withMessage('generalError')], [check('subject').matches(subjectRegex).withMessage('subjectInvalid')], [check('studyLevel').matches(studyLevelRegex).withMessage('studyLevelInvalid')], [check('dueDate').isDate().withMessage('generalError')], [check('request').isLength({max: 750}).withMessage('requestLength')], [check('datePosted').isDate().withMessage('generalError')], [check('timePosted').matches(timeFormatRegex).withMessage('generalError')], function (req, res) {
 		
-		// We need to validate that the homework due date sent from the frontend isn't before the current date
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
-		const tempDueDate = new Date(req.body.dueDate);
-		const tempDatePosted = new Date(req.body.datePosted);
-		const datePostedInvalid = tempDatePosted < today;
-		const dueDateInvalid = tempDueDate < today;
+	// 	// We need to validate that the homework due date sent from the frontend isn't before the current date
+	// 	const today = new Date();
+	// 	today.setHours(0, 0, 0, 0);
+	// 	const tempDueDate = new Date(req.body.dueDate);
+	// 	const tempDatePosted = new Date(req.body.datePosted);
+	// 	const datePostedInvalid = tempDatePosted < today;
+	// 	const dueDateInvalid = tempDueDate < today;
 
-		const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            let errMessages = [];
-            for (let anError of errors.errors) {
-                errMessages.push(anError.msg);
-            }
-			res.send(errMessages);
-		} else if (dueDateInvalid) {
-				res.send('dueDateInvalid');
-		} else if (datePostedInvalid) {
-				res.send('generalError');
-		} else {
-			// Check the userId & username correspond to a registered user (somebody could just change them in browser devtools & create a load of requests otherwise)
-			const userId = req.sanitize(req.body.userId);
-			const username = req.sanitize(req.body.username);
-			const userQuery = 'SELECT * FROM users WHERE id = ? AND username = ?;';
+	// 	const errors = validationResult(req);
+  //       if (!errors.isEmpty()) {
+  //           let errMessages = [];
+  //           for (let anError of errors.errors) {
+  //               errMessages.push(anError.msg);
+  //           }
+	// 		res.send(errMessages);
+	// 	} else if (dueDateInvalid) {
+	// 			res.send('dueDateInvalid');
+	// 	} else if (datePostedInvalid) {
+	// 			res.send('generalError');
+	// 	} else {
+	// 		// Check the userId & username correspond to a registered user (somebody could just change them in browser devtools & create a load of requests otherwise)
+	// 		const userId = req.sanitize(req.body.userId);
+	// 		const username = req.sanitize(req.body.username);
+	// 		const userQuery = 'SELECT * FROM users WHERE id = ? AND username = ?;';
 			
-			db.query(userQuery, [userId, username], (error, result) => {
-				if (error) {
-					res.send(['generalError']);
-				} else if (!(result.length > 0)) {
-				// No user record with the userId & username received from frontend - user might've used browser devtools to send bogus data
-					res.send(['generalError']);
-				} else {
-				// User is legit
-					let insertQuery = 'INSERT INTO requests(userId, username, userLang, subject, studyLevel, dueDate, request, datePosted, timePosted) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);';
-					const userLang = req.sanitize(req.body.userLang);
-					const subject = req.sanitize(req.body.subject);
-					const studyLevel = req.sanitize(req.body.studyLevel);
-					const dueDate = req.sanitize(req.body.dueDate);
-					const request = req.sanitize(req.body.request);
-					const datePosted = req.sanitize(req.body.datePosted);
-					const timePosted = req.sanitize(req.body.timePosted);
-					const newRequest = [userId, username, userLang, subject, studyLevel, dueDate, request, datePosted, timePosted];
+	// 		db.query(userQuery, [userId, username], (error, result) => {
+	// 			if (error) {
+	// 				res.send(['generalError']);
+	// 			} else if (!(result.length > 0)) {
+	// 			// No user record with the userId & username received from frontend - user might've used browser devtools to send bogus data
+	// 				res.send(['generalError']);
+	// 			} else {
+	// 			// User is legit
+	// 				let insertQuery = 'INSERT INTO requests(userId, username, userLang, subject, studyLevel, dueDate, request, datePosted, timePosted) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);';
+	// 				const userLang = req.sanitize(req.body.userLang);
+	// 				const subject = req.sanitize(req.body.subject);
+	// 				const studyLevel = req.sanitize(req.body.studyLevel);
+	// 				const dueDate = req.sanitize(req.body.dueDate);
+	// 				const request = req.sanitize(req.body.request);
+	// 				const datePosted = req.sanitize(req.body.datePosted);
+	// 				const timePosted = req.sanitize(req.body.timePosted);
+	// 				const newRequest = [userId, username, userLang, subject, studyLevel, dueDate, request, datePosted, timePosted];
 					
-					db.query(insertQuery, newRequest, (anError, result) => {
-						if (anError) {
-							res.send(['generalError']);
-						} else {
-							res.send(['success']);
-						}
-					})
-				}
-			})
+	// 				db.query(insertQuery, newRequest, (anError, result) => {
+	// 					if (anError) {
+	// 						res.send(['generalError']);
+	// 					} else {
+	// 						res.send(['success']);
+	// 					}
+	// 				})
+	// 			}
+	// 		})
 
-		}
-
-
-	})
+	// 	}
 
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Retrieve all help Requests in database and return to frontend
+	// })
 
-	app.get('/all-requests', isAuth, function (req, res) {
+
+	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// // Retrieve all help Requests in database and return to frontend
+
+	// app.get('/all-requests', isAuth, function (req, res) {
 		
-		const query = 'SELECT * FROM requests';
+	// 	const query = 'SELECT * FROM requests';
 
-		db.query(query, (err, result) => {
-			if (err) {
-				res.send(['generalError']);
-			} else if (result.length < 1) {
-				res.send(['noRequests']);
-			} else {
-				res.send(result);
-			}
-		})
+	// 	db.query(query, (err, result) => {
+	// 		if (err) {
+	// 			res.send(['generalError']);
+	// 		} else if (result.length < 1) {
+	// 			res.send(['noRequests']);
+	// 		} else {
+	// 			res.send(result);
+	// 		}
+	// 	})
 
-	})
+	// })
 	
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Delete a Request for help from the database
+	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// // Delete a Request for help from the database
 
-	app.delete('/delete-request/:id', isAuth, function (req, res){
-		const requestId = req.params.id;
-		const query = 'DELETE FROM requests WHERE requestId = ?;';
+	// app.delete('/delete-request/:id', isAuth, function (req, res){
+	// 	const requestId = req.params.id;
+	// 	const query = 'DELETE FROM requests WHERE requestId = ?;';
 
-		db.query(query, [requestId], (err, result) => {
-			if (err) {
-				console.log(err);
-				res.send(['deletionFailed']);
-			} else {
-				res.send(['success']);
-			}
-		})
-	})
+	// 	db.query(query, [requestId], (err, result) => {
+	// 		if (err) {
+	// 			console.log(err);
+	// 			res.send(['deletionFailed']);
+	// 		} else {
+	// 			res.send(['success']);
+	// 		}
+	// 	})
+	// })
 
 	
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Save a new message to the database
+	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// // Save a new message to the database
 
-	app.post('/new-message', isAuth, [check('requestId').isInt({min: 1}).withMessage('generalError')], [check('userLang').matches(userLangRegex).withMessage('generalError')], [check('sender').matches(usernameRegex).withMessage('generalError').isLength({min: 8, max: 25}).withMessage('generalError')], [check('recipient').matches(usernameRegex).withMessage('generalError').isLength({min: 8, max: 25}).withMessage('generalError')], [check('message').isLength({min: 2, max: 500}).withMessage('lengthError')], [check('dateSent').isDate().withMessage('generalError')], [check('timeSent').matches(timeFormatRegex).withMessage('generalError')], function (req, res) {
+	// app.post('/new-message', isAuth, [check('requestId').isInt({min: 1}).withMessage('generalError')], [check('userLang').matches(userLangRegex).withMessage('generalError')], [check('sender').matches(usernameRegex).withMessage('generalError').isLength({min: 8, max: 25}).withMessage('generalError')], [check('recipient').matches(usernameRegex).withMessage('generalError').isLength({min: 8, max: 25}).withMessage('generalError')], [check('message').isLength({min: 2, max: 500}).withMessage('lengthError')], [check('dateSent').isDate().withMessage('generalError')], [check('timeSent').matches(timeFormatRegex).withMessage('generalError')], function (req, res) {
 
-		// We need to validate that the message sent date from the frontend isn't before the current date
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tempDateSent = new Date(req.body.dateSent);
-        const dateSentInvalid = tempDateSent < today;
+	// 	// We need to validate that the message sent date from the frontend isn't before the current date
+  //       const today = new Date();
+  //       today.setHours(0, 0, 0, 0);
+  //       const tempDateSent = new Date(req.body.dateSent);
+  //       const dateSentInvalid = tempDateSent < today;
 
-		const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            let errMessages = [];
-            for (let anError of errors.errors) {
-				console.log(anError.param);
-                errMessages.push(anError.msg);
-            }
-            res.send(errMessages);
-		} else if (dateSentInvalid) {
-			res.send(['generalError']);
-		} else {
+	// 	const errors = validationResult(req);
+  //       if (!errors.isEmpty()) {
+  //           let errMessages = [];
+  //           for (let anError of errors.errors) {
+	// 			console.log(anError.param);
+  //               errMessages.push(anError.msg);
+  //           }
+  //           res.send(errMessages);
+	// 	} else if (dateSentInvalid) {
+	// 		res.send(['generalError']);
+	// 	} else {
 			
-			let query = 'INSERT INTO messages(requestId, language, sender, recipient, message, dateSent, timeSent) VALUES(?, ?, ?, ?, ?, ?, ?);';
-			const requestId = req.sanitize(req.body.requestId);
-			const language = req.sanitize(req.body.userLang);
-			const sender = req.sanitize(req.body.sender);
-			const recipient = req.sanitize(req.body.recipient);
-			const message = req.sanitize(req.body.message);
-			const dateSent = req.sanitize(req.body.dateSent);
-			const timeSent = req.sanitize(req.body.timeSent);
-			const newMessage = [requestId, language, sender, recipient, message, dateSent, timeSent];
+	// 		let query = 'INSERT INTO messages(requestId, language, sender, recipient, message, dateSent, timeSent) VALUES(?, ?, ?, ?, ?, ?, ?);';
+	// 		const requestId = req.sanitize(req.body.requestId);
+	// 		const language = req.sanitize(req.body.userLang);
+	// 		const sender = req.sanitize(req.body.sender);
+	// 		const recipient = req.sanitize(req.body.recipient);
+	// 		const message = req.sanitize(req.body.message);
+	// 		const dateSent = req.sanitize(req.body.dateSent);
+	// 		const timeSent = req.sanitize(req.body.timeSent);
+	// 		const newMessage = [requestId, language, sender, recipient, message, dateSent, timeSent];
 
-			db.query(query, newMessage, (error, result) => {
-				if (error) {
-					console.log("SQL insertion error");
-					res.send(['generalError']);
-				} else {
-					res.send(['success']);
-				}
-			})
-		}
+	// 		db.query(query, newMessage, (error, result) => {
+	// 			if (error) {
+	// 				console.log("SQL insertion error");
+	// 				res.send(['generalError']);
+	// 			} else {
+	// 				res.send(['success']);
+	// 			}
+	// 		})
+	// 	}
 
-	})
+	// })
 
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Retrieve a user's chats/conversations and send them to the frontend Vue app
+	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// // Retrieve a user's chats/conversations and send them to the frontend Vue app
 
-	app.get('/conversations', isAuth, function (req, res) {
+	// app.get('/conversations', isAuth, function (req, res) {
 		
-		const username = req.sanitize(req.query.username);
+	// 	const username = req.sanitize(req.query.username);
 
-		const queryRequestIds = 'SELECT DISTINCT requestId FROM messages WHERE sender = ? OR recipient = ? ;';
+	// 	const queryRequestIds = 'SELECT DISTINCT requestId FROM messages WHERE sender = ? OR recipient = ? ;';
 
-		db.query(queryRequestIds, [username, username], (error, result) => {
-			if (error) {
-				console.log("Error getting unique requestIds");
-				res.send(['generalError']);
-			} else if (result.length < 1) {
-				console.log("User has no messages");
-				res.send(['noMessages']);
-			} else {
-				/* Conversations will hold arrays of Message objects. Each sub-array in conversations will only contain messages objects which share the
-                        		same requestId property - i.e. messages which all relate to one specific Request object will be grouped in their own sub-array */
-				let conversations = [];
-				result.forEach(aResult => {
-					let convoQuery = `SELECT * FROM messages WHERE requestId = ${aResult.requestId} AND (sender = ? OR recipient = ?);`;
-					db.query(convoQuery, [username, username], (err, outcome) => {
-                        if (err) {
-							console.log("Error getting conversations");
-                            res.send(['generalError']);
-                        } else {
-                            conversations.push(outcome);
-							if (aResult === result[result.length - 1]) {
-								res.send(conversations);
-							}
-                        }
-                    })
-				})
-			}
-		})
+	// 	db.query(queryRequestIds, [username, username], (error, result) => {
+	// 		if (error) {
+	// 			console.log("Error getting unique requestIds");
+	// 			res.send(['generalError']);
+	// 		} else if (result.length < 1) {
+	// 			console.log("User has no messages");
+	// 			res.send(['noMessages']);
+	// 		} else {
+	// 			/* Conversations will hold arrays of Message objects. Each sub-array in conversations will only contain messages objects which share the
+  //                       		same requestId property - i.e. messages which all relate to one specific Request object will be grouped in their own sub-array */
+	// 			let conversations = [];
+	// 			result.forEach(aResult => {
+	// 				let convoQuery = `SELECT * FROM messages WHERE requestId = ${aResult.requestId} AND (sender = ? OR recipient = ?);`;
+	// 				db.query(convoQuery, [username, username], (err, outcome) => {
+  //                       if (err) {
+	// 						console.log("Error getting conversations");
+  //                           res.send(['generalError']);
+  //                       } else {
+  //                           conversations.push(outcome);
+	// 						if (aResult === result[result.length - 1]) {
+	// 							res.send(conversations);
+	// 						}
+  //                       }
+  //                   })
+	// 			})
+	// 		}
+	// 	})
 
-	})
+	// })
 	
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Retrieve an updated (when a new reply has been sent) list of messages in a conversation and send back to frontend Vue app
+	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// // Retrieve an updated (when a new reply has been sent) list of messages in a conversation and send back to frontend Vue app
 
-	app.get('/messages', isAuth, function (req, res) {
+	// app.get('/messages', isAuth, function (req, res) {
 
-		const username = req.sanitize(req.query.username);
-		const requestId = req.sanitize(req.query.requestId);
-		const query = 'SELECT * FROM messages WHERE requestId = ? AND (sender = ? OR recipient = ?);';
+	// 	const username = req.sanitize(req.query.username);
+	// 	const requestId = req.sanitize(req.query.requestId);
+	// 	const query = 'SELECT * FROM messages WHERE requestId = ? AND (sender = ? OR recipient = ?);';
 
-		db.query(query, [requestId, username, username], (error, result) => {
-			if (error) {
-				console.log("Error getting messages in chat from database");
-				res.send(['generalError']);
-			} else if (result.length < 1) {
-				res.send(['noMessages'])
-			} else {
-				res.send(result);
-			}
-		})
+	// 	db.query(query, [requestId, username, username], (error, result) => {
+	// 		if (error) {
+	// 			console.log("Error getting messages in chat from database");
+	// 			res.send(['generalError']);
+	// 		} else if (result.length < 1) {
+	// 			res.send(['noMessages'])
+	// 		} else {
+	// 			res.send(result);
+	// 		}
+	// 	})
 
-	})
+	// })
 
 	
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Delete the message with the specified messageId
+	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// // Delete the message with the specified messageId
 
-	app.delete('/delete-message/:id', isAuth, function (req, res) {
-		const messageId = req.params.id;
-		const query = 'DELETE FROM messages WHERE messageId = ?;';
+	// app.delete('/delete-message/:id', isAuth, function (req, res) {
+	// 	const messageId = req.params.id;
+	// 	const query = 'DELETE FROM messages WHERE messageId = ?;';
 
-		db.query(query, [messageId], (err, result) => {
-			if (err) {
-				console.log(err);
-				res.send(['deletionFailed']);
-			} else {
-				res.send(['success']);
-			}
-		})
-	})
+	// 	db.query(query, [messageId], (err, result) => {
+	// 		if (err) {
+	// 			console.log(err);
+	// 			res.send(['deletionFailed']);
+	// 		} else {
+	// 			res.send(['success']);
+	// 		}
+	// 	})
+	// })
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
