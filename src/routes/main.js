@@ -131,7 +131,7 @@ module.exports = function(app) {
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route to receive login credentials from frontend, check them against the database and send result back to frontend
 	app.post('/login',
-		[check('email').matches(emailRegex).withMessage('emailInvalid')],
+		[check('email').matches(emailRegEx).withMessage('emailInvalid')],
 		[check('password').isStrongPassword().withMessage('passwordInvalid')],
 		function (req, res) {
 		
