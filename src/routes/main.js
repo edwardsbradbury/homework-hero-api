@@ -20,11 +20,6 @@ module.exports = function(app) {
 	// Time format regex (used in Requests routes) to check the time a request was posted is in format hh:mm:ss
 	const timeFormatRegex = /^(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])$/;
 
-	/* Create a Google Translate API instance so we can use its methods.
-		You can look at the methods in server/src/node_modules/google-translate/lib/main.js
-		User guides from Google are here https://cloud.google.com/translate/docs/how-to */
-	const googleTranslate = require('google-translate')(api);
-
 	// Use the bcrypt password module
 	const bcrypt = require('bcrypt');
 	// Number of salting rounds for password hashing
