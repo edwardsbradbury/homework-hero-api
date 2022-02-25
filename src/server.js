@@ -6,6 +6,8 @@ const express = require('express');
 const expressSanitizer = require('express-sanitizer');
 // Import the database configuration settings
 const db = require('./config/database');
+// Need to access .env file for variables which should be kept secret for security reasons
+const config = require('dotenv').config()
 // Import session manager module
 const session = require('express-session');
 // Use MYSQLStore middleware to store/retrieve/check user session data in our database when routes are triggered
@@ -65,7 +67,7 @@ const sessionStore = new MySQLStore({
 
 // Configure session manager
 app.use(session({
-    secret: 'onepersoncodedthisentiresoftwareproject',
+    secret: process.env.SECURE_KEY,
     store: sessionStore,
     proxy: true,
     resave: false,
