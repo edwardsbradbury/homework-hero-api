@@ -35,7 +35,7 @@ app.use(express.json());
     https://lessonup.herokuapp.com */
 app.use(cors({
         credentials: true,
-        origin: '',
+        origin: 'https://homework-hero.herokuapp.com',
         preflightContinue: true,
         methods: ['GET', 'POST', 'DELETE'],
 }))
