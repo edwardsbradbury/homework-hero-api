@@ -147,7 +147,7 @@ module.exports = function(app) {
       const email = req.sanitize(req.body.email);
       const password = req.sanitize(req.body.password);
       // Construct SQL 'prepared statement' to search the database for a record with matching email address
-			const sqlQuery = 'SELECT * FROM users WHERE email = ?;';
+			const sqlQuery = 'SELECT * FROM users WHERE email1 = ?;';
 		
 			// Execute the SQL query to retrieve matching record (if there is one)
 		 	db.query(sqlQuery, [email], (err, result) => {
