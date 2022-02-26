@@ -99,7 +99,7 @@ module.exports = function(app) {
 							const newRecord = [userType, first, last, email1, dob, email2, hashedPassword];
 		 					db.query(sqlQuery, newRecord, (someErr, result) => {
 		 						if (someErr) {
-		 							res.send(['Main.js line 102 - error inserting record into database']);
+		 							res.send([someErr]);
 		 						} else {
 									// Need to get the id property of the record just created & return to frontend with sucsess
 									db.query('SELECT * FROM users WHERE email1 = ?', [email1], (anError, user) => {
