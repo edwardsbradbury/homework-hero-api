@@ -62,7 +62,10 @@ module.exports = function(app) {
 			// if (!(req.body.userType === 'client' || req.body.userType === 'tutor')) {
 			// 	errMessages.push('generalError');
 			// }
-			res.send(errMessages);
+			res.json({
+				outcome: 'failure',
+				error: errMessages
+			})
 		} else {
 			// Form input all passed the validation checks
 
@@ -72,11 +75,17 @@ module.exports = function(app) {
 
 			db.query(checkAlreadyExists, [email1], (error, result) => {
 				if (error) {
-		 			res.send(['Main.js line 75 - error checking database for existing record with email']);
+		 			res.json({
+						 outcome: 'failure',
+						 error: 'checking db for existing user failed'
+					 })
 				// If there's a result from the database, we know there's already a user account with that username
 		 		} else if (result.length > 0) {
 		 			// Send message back to frontend
-		 			res.send(['duplicateUser']);
+		 			res.json({
+						 outcome: 'failure',
+						 error: 'user already exists'
+					 })
 				
 		 		// At this point, form input passed validation & username isn't already associated wtih an account
 		 		} else {
@@ -94,24 +103,39 @@ module.exports = function(app) {
 
 		 			// Hash the password, then connect to the database and insert new user record in database
 		 			bcrypt.hash(password, saltRounds, function(err, hashedPassword) {
-		 				if (err) res.send(['Main.js line 97 - error hashing password']);
+		 				if (err) res.json({
+							 outcome: 'failure',
+							 error: 'bcrypt failed to hash password'
+						 });
 		 				else {
 							const newRecord = [userType, first, last, email1, dob, email2, hashedPassword];
 		 					db.query(sqlQuery, newRecord, (someErr, result) => {
 		 						if (someErr) {
-		 							res.send(['Failed to insert new user record']);
+									res.json({
+										outcome: 'failure',
+										error: 'insertion into db failed'
+									})
 		 						} else {
 									// Need to get the id property of the record just created & return to frontend with sucsess
 									db.query('SELECT * FROM users WHERE email1 = ?', [email1], (anError, user) => {
 										if (anError) {
-											res.send(['Main.js line 107 - error querying id of new record']);
+											res.json({
+												outcome: 'failure',
+												error: 'failed to retrieve id of new record'
+											})
 										} else {
 											req.login(user[0], function (someErr) {
 												if (someErr) {
-													res.send(['Main.js line 111 - error calling passport.login']);
+													res.json({
+														outcome: 'failure',
+														error: 'req.login failed'
+													})
 												} else {
 													// Send confirmation back to frontend
-													res.send(['success', user[0].id]);
+													res.json({
+														outcome: 'success',
+														userId: user[0].id
+													})
 												}
 											})
 										}
@@ -141,7 +165,10 @@ module.exports = function(app) {
             for (let anError of errors.errors) {
                 errMessages.push(anError.msg);
             }
-			res.send(errMessages);
+			res.json({
+				outcome: 'failure',
+				error: errMessages
+			})
 		} else {
 			// Store the credentials sent from frontend. See comment above bodyParser in server/src/app.js for more info about how data is passed from frontend
       const email = req.sanitize(req.body.email);
@@ -152,27 +179,42 @@ module.exports = function(app) {
 			// Execute the SQL query to retrieve matching record (if there is one)
 		 	db.query(sqlQuery, [email], (err, result) => {
 			 	if (err) {
-			 		res.send(['generalError']);
+					res.json({
+						outcome: 'failure',
+						error: 'checking db for user failed'
+					})
 		 		// If the result variable is empty, no records were found in the database with matching username
 			 	} else if (result.length < 1) {
-			 		res.send(['userNotFound']);
+					res.json({
+						outcome: 'failure',
+						error: 'user not found'
+					})
 		 		} else {
 			 	// Check the password from the matching db record
 		 			const passwordFromRecord = result[0].password;
 			 		bcrypt.compare(password, passwordFromRecord, function (error, passResult) {
 						if (error) {
-			 				res.send(['generalError']);
+							res.json({
+								outcome: 'failure',
+								error: 'bcrypt.compare caused an error'
+							})
 			 			} else if (passResult === false) {
 			 				// Passwords didn't match - send failure message back to frontend
-			 				res.send(['passwordRejected']);
+							res.json({
+								outcome: 'failure',
+								error: 'incorrect password'
+							})
 			 			} else {
 							req.login(result[0], function(anErr) {
 								if (anErr) {
-									res.send(['generalError'])
+									res.json({
+										outcome: 'failure',
+										error: 'req.login failed'
+									})
 								} else {
 									// Send success message back to frontend
-									// res.send(['success', result[0].id, result[0].userType, result[0].first, result[0].last]);
 									res.json({
+										outcome: 'success',
 										userId: result[0].id,
 										userType: result[0].userType,
 										first: result[0].first,
