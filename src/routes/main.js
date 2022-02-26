@@ -38,7 +38,7 @@ module.exports = function(app) {
 	// Route to receive registration form data, sanitize it, then post it to the database
 
 	app.post('/register',
-		[check('userType').isAlpha().isLength({max: 6}).withMessage('generalError')],
+		[check('userType').isAlpha().isLength({max: 6}).withMessage('user type length')],
 		[check('first').matches(nameRegEx).withMessage('firstNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
 		[check('last').matches(nameRegEx).withMessage('lastNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
 		[check('email1').matches(emailRegEx).withMessage('emailInvalid').isLength({max: 100}).withMessage('email1Length')],
@@ -72,7 +72,7 @@ module.exports = function(app) {
 
 			db.query(checkAlreadyExists, [email1], (error, result) => {
 				if (error) {
-		 			res.send(['generalError']);
+		 			res.send(['Main.js line 75 - error checking database for existing record with email']);
 				// If there's a result from the database, we know there's already a user account with that username
 		 		} else if (result.length > 0) {
 		 			// Send message back to frontend
@@ -94,21 +94,21 @@ module.exports = function(app) {
 
 		 			// Hash the password, then connect to the database and insert new user record in database
 		 			bcrypt.hash(password, saltRounds, function(err, hashedPassword) {
-		 				if (err) res.send(['generalError']);
+		 				if (err) res.send(['Main.js line 97 - error hashing password']);
 		 				else {
 							const newRecord = [userType, first, last, email1, dob, email2, hashedPassword];
 		 					db.query(sqlQuery, newRecord, (someErr, result) => {
 		 						if (someErr) {
-		 							res.send(['generalError']);
+		 							res.send(['Main.js line 102 - error inserting record into database']);
 		 						} else {
 									// Need to get the id property of the record just created & return to frontend with sucsess
 									db.query('SELECT * FROM users WHERE email1 = ?', [email1], (anError, user) => {
 										if (anError) {
-											res.send(['generalError']);
+											res.send(['Main.js line 107 - error querying id of new record']);
 										} else {
 											req.login(user[0], function (someErr) {
 												if (someErr) {
-													res.send(['generalError']);
+													res.send(['Main.js line 111 - error calling passport.login']);
 												} else {
 													// Send confirmation back to frontend
 													res.send(['success', user[0].id]);
