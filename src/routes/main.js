@@ -38,7 +38,7 @@ module.exports = function(app) {
 	// Route to receive registration form data, sanitize it, then post it to the database
 
 	app.post('/register',
-		[check('userType').isAlpha().isLength({max: 6}).withMessage('user type length')],
+		[check('userType').isAlpha().isLength({max: 6}).withMessage('userTypeInvalid')],
 		[check('first').matches(nameRegEx).withMessage('firstNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
 		[check('last').matches(nameRegEx).withMessage('lastNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
 		[check('email1').matches(emailRegEx).withMessage('emailInvalid').isLength({max: 100}).withMessage('email1Length')],
