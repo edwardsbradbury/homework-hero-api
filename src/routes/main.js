@@ -171,7 +171,13 @@ module.exports = function(app) {
 									res.send(['generalError'])
 								} else {
 									// Send success message back to frontend
-									res.send(['success', result[0].id, result[0].userType, result[0].first, result[0].last]);
+									// res.send(['success', result[0].id, result[0].userType, result[0].first, result[0].last]);
+									res.json({
+										userId: result[0].id,
+										userType: result[0].userType,
+										first: result[0].first,
+										last: result[0].last
+									})
 								}
 							})
 						}
