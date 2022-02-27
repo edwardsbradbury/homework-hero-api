@@ -239,7 +239,7 @@ module.exports = function(app) {
 		req.logout();
 		// Delete the session
 		req.session.destroy();
-		res.send();
+		res.json({loggedOut: true});
 	})
 
 
