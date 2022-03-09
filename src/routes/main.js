@@ -11,8 +11,6 @@ module.exports = function(app) {
 	const emailRegEx = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 	// nameRegex is used in login & register routes to check that first & last names only contain letters and hyphen (dash -) characters
 	const nameRegEx = /^[a-zA-Z]+(-[a-zA-Z]+)*$/;
-	// Username regex used to validate username in registration route
-	const usernameRegex = /^[a-zA-Z0-9_]*$/;
 	// Regex to test that the subject of a new Request for help contains only letters and spaces
 	const subjectRegex = /^[a-zA-Z ]*$/;
 	// Regex to test the 'study level' of a new help Request
@@ -99,7 +97,7 @@ module.exports = function(app) {
 		 			const password = req.sanitize(req.body.password);
 
 		 			// Create SQL query string
-		 			let sqlQuery = 'INSERT INTO users (userType, first, last, email1, dob, email2, password) VALUES (?, ?, ?, ?, ?, ?, ?);';
+		 			let sqlQuery = 'INSERT INTO users (first, last, userType, email1, dob, email2, password) VALUES (?, ?, ?, ?, ?, ?, ?);';
 
 		 			// Hash the password, then connect to the database and insert new user record in database
 		 			bcrypt.hash(password, saltRounds, function(err, hashedPassword) {
@@ -108,7 +106,7 @@ module.exports = function(app) {
 							 error: 'bcrypt failed to hash password'
 						 });
 		 				else {
-							const newRecord = [userType, first, last, email1, dob, email2, hashedPassword];
+							const newRecord = [first, last, userType, email1, dob, email2, hashedPassword];
 		 					db.query(sqlQuery, newRecord, (someErr, result) => {
 		 						if (someErr) {
 									res.json({
@@ -242,6 +240,46 @@ module.exports = function(app) {
 		res.json({loggedOut: true});
 	})
 
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Route to search the database for members (either tutors or clients) based on subject and/or level of study parameters
+
+	app.post('/search',
+		[check('subject').matches(subjectRegex)],
+		function (req, res) {
+			const errors = validationResult(req);
+			if (!errors.isEmpty()) {
+				res.json({
+					oucome: 'failure',
+					error: 'Invalid subject'
+				})
+			} else {
+				const type = req.sanitize(req.query.userType);
+				const subject = req.sanitize(req.body.subject);
+				const level = req.sanitize(req.body.level);
+				let sqlQuery = 'SELECT * FROM users ';
+				if (type === 'client') {
+					if (subject.length < 1 || level.length < 1) {
+						res.json({
+							outcome: 'failure',
+							error: 'Missing field'
+						})
+					} else {
+						sqlQuery += `WHERE userType = 'tutor' AND WHERE subject = ?`;
+					}
+				} else {
+					if (subject.length < 1) {
+						res.json({
+							outcome: 'failure',
+							error: 'Missing subject'
+						})
+					} else {
+						sqlQuery += `WHERE userType = 'client' AND WHERE subject = ?`;
+					}
+				}
+			}
+		}
+	)
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Process new Requests for help (validate, sanitize and push to database)
