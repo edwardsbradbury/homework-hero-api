@@ -10,7 +10,7 @@ module.exports = function(app) {
 	<some letters and numbers> @ <some letters and numbers> . <some letters and numbers> */
 	const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 	// nameRegex is used in login & register routes to check that first & last names only contain letters and hyphen (dash -) characters
-	// const nameRegex = /^[a-zA-Z]+(-[a-zA-Z]+)*$/;
+	const nameRegex = /^[a-zA-Z]+(-[a-zA-Z]+)*$/;
 	// Regex to test that the subject of a new Request for help contains only letters and spaces
 	// const subjectRegex = /^[a-zA-Z ]*$/;
 	// List of subjects, used in some routes to check a subject is valid
