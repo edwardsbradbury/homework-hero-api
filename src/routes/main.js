@@ -252,7 +252,7 @@ module.exports = function(app) {
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route for users to record a subject which either they need help with (client type user) or can teach (tutor type user)
 
-	app.post('/add_subject', isAuth
+	app.post('/add_subject', isAuth,
 		// [check('userId').isInt({min: 1})],
 		[check('first').matches(nameRegex)],
 		[check('last').matches(nameRegex)],
