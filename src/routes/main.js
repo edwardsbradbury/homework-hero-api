@@ -300,7 +300,8 @@ module.exports = function(app) {
 	// Route to search the database for members (either tutors or clients) based on subject and/or level of study parameters
 
 	app.post('/search',
-		[check('subject').matches(subjectRegex)],
+		// [check('subject').matches(subjectRegex)],
+		[check('subject').isIn(subjects)],
 		function (req, res) {
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
