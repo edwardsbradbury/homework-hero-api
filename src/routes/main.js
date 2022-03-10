@@ -6,15 +6,19 @@ module.exports = function(app) {
 	const isAuth = require('./authMiddleware').isAuth;
 	// Use the Express validator module
 	const { check, validationResult } = require('express-validator');
-	/* emailRegEx is used in login & register routes below to test whether email addresses sent from frontend match an email address format pattern, i.e.
+	/* emailRegex is used in login & register routes below to test whether email addresses sent from frontend match an email address format pattern, i.e.
 	<some letters and numbers> @ <some letters and numbers> . <some letters and numbers> */
-	const emailRegEx = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+	const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 	// nameRegex is used in login & register routes to check that first & last names only contain letters and hyphen (dash -) characters
-	const nameRegEx = /^[a-zA-Z]+(-[a-zA-Z]+)*$/;
+	// const nameRegex = /^[a-zA-Z]+(-[a-zA-Z]+)*$/;
 	// Regex to test that the subject of a new Request for help contains only letters and spaces
-	const subjectRegex = /^[a-zA-Z ]*$/;
+	// const subjectRegex = /^[a-zA-Z ]*$/;
+	// List of subjects, used in some routes to check a subject is valid
+	const subjects = ['Maths', 'English', 'Biology', 'Chemistry', 'Physics', 'Geography', 'History', 'Design and Technology', 'ICT', 'Computer Science', 'Religious Education', 'Art', 'French', 'German', 'Spanish', 'Italian'];
+	// List of levels of study, used in some routes to check validity of a level of study
+	const levels = ['GCSE', 'A level', 'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12', 'Year 13'];
 	// Regex to test the 'study level' of a new help Request
-	const studyLevelRegex = /^[a-zA-Z0-9 ]*$/;
+	// const studyLevelRegex = /^[a-zA-Z0-9 ]*$/;
 	// Time format regex (used in Requests routes) to check the time a request was posted is in format hh:mm:ss
 	const timeFormatRegex = /^(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])$/;
 
@@ -28,7 +32,10 @@ module.exports = function(app) {
 	// Handler for HTTP requests from unauthenticated clients
 	
 	app.get('/unauthenticated', function(req, res) {
-		res.send(['notAuthenticated']);
+		res.json({
+			outcome: 'failure',
+			error: 'unauthenticated'
+		})
 	})
 	
 
@@ -37,11 +44,11 @@ module.exports = function(app) {
 
 	app.post('/register',
 		[check('userType').isAlpha().isLength({max: 6}).withMessage('userTypeInvalid')],
-		[check('first').matches(nameRegEx).withMessage('firstNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
-		[check('last').matches(nameRegEx).withMessage('lastNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
-		[check('email1').matches(emailRegEx).withMessage('emailInvalid').isLength({max: 100}).withMessage('email1Length')],
+		[check('first').matches(nameRegex).withMessage('firstNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
+		[check('last').matches(nameRegex).withMessage('lastNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
+		[check('email1').matches(emailRegex).withMessage('emailInvalid').isLength({max: 100}).withMessage('email1Length')],
 		[check('dob').isDate().withMessage('dobInvalid')],
-		[check('email2').matches(emailRegEx).withMessage('emailInvalid').isLength({max: 100}).withMessage('email2Length')],
+		[check('email2').matches(emailRegex).withMessage('emailInvalid').isLength({max: 100}).withMessage('email2Length')],
 		[check('password').isStrongPassword().withMessage('passwordStrength').isLength({max: 20}).withMessage('passwordLength')],
 		function (req, res) {
 
@@ -153,7 +160,7 @@ module.exports = function(app) {
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route to receive login credentials from frontend, check them against the database and send result back to frontend
 	app.post('/login',
-		[check('email').matches(emailRegEx).withMessage('emailInvalid')],
+		[check('email').matches(emailRegex).withMessage('emailInvalid')],
 		[check('password').isStrongPassword().withMessage('passwordInvalid')],
 		function (req, res) {
 		
@@ -203,6 +210,7 @@ module.exports = function(app) {
 								error: 'incorrect password'
 							})
 			 			} else {
+							// Try to create a user session record
 							req.login(result[0], function(anErr) {
 								if (anErr) {
 									res.json({
@@ -230,7 +238,7 @@ module.exports = function(app) {
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Logout route/endpoint
+	// Logout route/endpoint: deletes user's session record
 
 	app.get('/logout', function (req, res) {
 		// Delete the Passportjs user object
@@ -240,6 +248,53 @@ module.exports = function(app) {
 		res.json({loggedOut: true});
 	})
 
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Route for users to record a subject which either they need help with (client type user) or can teach (tutor type user)
+
+	app.post('/add_subject', isAuth
+		// [check('userId').isInt({min: 1})],
+		[check('first').matches(nameRegex)],
+		[check('last').matches(nameRegex)],
+		// [check('subject').matches(subjectRegex)],
+		[check('subject').isIn(subjects)],
+		// [check('level').matches(studyLevelRegex)],
+		[check('level').isIn(levels)],
+		function(req, res) {
+			const errors = validationResult(req);
+			if (!errors.isEmpty()) {
+				res.json({
+					outcome: 'failure',
+					error: 'Invalid data'
+				});
+			} else {
+				const id = req.sanitize(req.body.userId);
+				const first = req.sanitize(req.body.first);
+				const last = req.sanitize(req.body.last)
+				const subject = req.sanitize(req.body.subject);
+				const level = req.sanitize(req.body.level);
+				if (!(id && first && last && subject && level)) {
+					res.json({
+						outcome: 'failure',
+						error: 'Missing data'
+					});
+				} else {
+					let sqlQuery = 'INSERT INTO userSubjectLevel (userId, first, last, subject, level) VALUES (?, ?, ?, ?, ?)';
+					db.query(sqlQuery, [id, first, last, subject, level], (err, result) => {
+						if (err) {
+							res.json({
+								outcome: 'failure',
+								error: 'SQL insertion failed'
+							});
+						} else {
+							res.json({
+								outcome: 'success'
+							});
+						}
+					});
+				}
+			}
+	})
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route to search the database for members (either tutors or clients) based on subject and/or level of study parameters
