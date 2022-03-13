@@ -16,9 +16,9 @@ const bcrypt = require('bcrypt');
     Note that the username & password are retrieved from the session store in the database - they're
     not user input sent with the HTTP request. Effectively we're checking that the user's session credentials
     match their credentials in the users table */
-const verifyCallback = (email, password, done) => {
+const verifyCallback = (username, password, done) => {
     
-    const query = `SELECT * FROM users WHERE email = '${email}'`;
+    const query = `SELECT * FROM users WHERE email1 = '${username}'`;
     
     db.query(query, (error, result) => {
 
