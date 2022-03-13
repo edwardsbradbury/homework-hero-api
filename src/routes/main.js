@@ -268,7 +268,7 @@ module.exports = function(app) {
 					error: 'Invalid data'
 				});
 			} else {
-				const id = req.sanitize(req.body.userId);
+				const id = req.sanitize(req.body.id);
 				const first = req.sanitize(req.body.first);
 				const last = req.sanitize(req.body.last)
 				const subject = req.sanitize(req.body.subject);
