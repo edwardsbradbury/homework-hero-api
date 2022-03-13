@@ -43,7 +43,7 @@ const verifyCallback = (username, password, done) => {
 
 }
 
-const strategy  = new LocalStrategy(verifyCallback);
+const strategy  = new LocalStrategy({usernameField: 'email1'}, verifyCallback);
 
 // Make the passportjs instance use this configuration
 passport.use(strategy);
