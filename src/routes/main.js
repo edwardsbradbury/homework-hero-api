@@ -314,7 +314,7 @@ module.exports = function(app) {
 				const subject = req.sanitize(req.body.subject);
 				const level = req.sanitize(req.body.level);
 				let findThese = type === 'client' ? 'tutor' : 'client';
-				let sqlQuery = `SELECT * FROM usersubjectlevel WHERE userType = ${findThese} AND `;
+				let sqlQuery = `SELECT * FROM usersubjectlevel WHERE userType = '${findThese}' AND `;
 				let params = [];
 				if (type === 'client') {
 					if (!(subject && level)) {
