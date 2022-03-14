@@ -261,9 +261,6 @@ module.exports = function(app) {
 		function(req, res) {
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
-				for (let anError of errors.errors) {
-					console.log(anError.param);
-				}
 				res.json({
 					outcome: 'failure',
 					error: 'Invalid data'
@@ -282,7 +279,8 @@ module.exports = function(app) {
 					});
 				} else {
 					let sqlQuery = 'INSERT INTO userSubjectLevel (userId, first, last, userType, subject, level) VALUES (?, ?, ?, ?, ?, ?)';
-					db.query(sqlQuery, [id, first, last, userType, subject, level], (err, result) => {
+					const params = [id, first, last, userType, subject, level];
+					db.query(sqlQuery, params, (err, result) => {
 						if (err) {
 							res.json({
 								outcome: 'failure',
@@ -302,39 +300,45 @@ module.exports = function(app) {
 	// Route to search the database for members (either tutors or clients) based on subject and/or level of study parameters
 
 	app.post('/search',
-		// [check('subject').matches(subjectRegex)],
+		[check('userType').isIn(['client', 'tutor'])],
 		[check('subject').isIn(subjects)],
 		function (req, res) {
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
 				res.json({
 					oucome: 'failure',
-					error: 'Invalid subject'
+					error: 'Invalid data'
 				})
 			} else {
-				const type = req.sanitize(req.query.userType);
+				const type = req.sanitize(req.body.userType);
 				const subject = req.sanitize(req.body.subject);
 				const level = req.sanitize(req.body.level);
-				let sqlQuery = 'SELECT * FROM users ';
+				let findThese = type === 'client' ? 'tutor' : 'client';
+				let sqlQuery = `SELECT * FROM usersubjectlevel WHERE userType = ${findThese} AND `;
+				let params = [];
 				if (type === 'client') {
-					if (subject.length < 1 || level.length < 1) {
+					if (!(subject && level)) {
 						res.json({
 							outcome: 'failure',
-							error: 'Missing field'
+							error: 'Missing search param'
 						})
 					} else {
-						sqlQuery += `WHERE userType = 'tutor' AND WHERE subject = ?`;
+						sqlQuery += 'WHERE subject = ? AND WHERE level = ?;';
+						params.push(subject, level);
 					}
+				} else if (type === 'tutor' && (subject && level)) {
+					sqlQuery += 'WHERE subject = ? AND WHERE level = ?;';
+					params.push(subject, level);
 				} else {
-					if (subject.length < 1) {
-						res.json({
-							outcome: 'failure',
-							error: 'Missing subject'
-						})
-					} else {
-						sqlQuery += `WHERE userType = 'client' AND WHERE subject = ?`;
-					}
+					sqlQuery += 'WHERE subject = ?;';
+					params.push(subject);
 				}
+				db.query(sqlQuery, params, (err, result) => {
+					if (err) console.log(err);
+					else {
+						res.send[result];
+					}
+				})
 			}
 		}
 	)
