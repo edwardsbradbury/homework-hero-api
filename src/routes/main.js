@@ -323,14 +323,14 @@ module.exports = function(app) {
 							error: 'Missing search param'
 						})
 					} else {
-						sqlQuery += 'WHERE subject = ? AND WHERE level = ?;';
+						sqlQuery += 'subject = ? AND level = ?;';
 						params.push(subject, level);
 					}
 				} else if (type === 'tutor' && (subject && level)) {
-					sqlQuery += 'WHERE subject = ? AND WHERE level = ?;';
+					sqlQuery += 'subject = ? AND level = ?;';
 					params.push(subject, level);
 				} else {
-					sqlQuery += 'WHERE subject = ?;';
+					sqlQuery += 'subject = ?;';
 					params.push(subject);
 				}
 				db.query(sqlQuery, params, (err, result) => {
