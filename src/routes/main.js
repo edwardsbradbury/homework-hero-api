@@ -279,7 +279,7 @@ module.exports = function(app) {
 					});
 				} else {
 					let sqlQuery = 'INSERT INTO userSubjectLevel (userId, first, last, userType, subject, level) VALUES (?, ?, ?, ?, ?, ?)';
-					db.query(sqlQuery, [id, first, last, subject, level], (err, result) => {
+					db.query(sqlQuery, [id, first, last, userType, subject, level], (err, result) => {
 						if (err) {
 							res.json({
 								outcome: 'failure',
