@@ -255,7 +255,7 @@ module.exports = function(app) {
 	app.post('/add_subject', isAuth,
 		[check('first').matches(nameRegex)],
 		[check('last').matches(nameRegex)],
-		[check('userType').isIn(['client', 'tutor'])]
+		[check('userType').isIn(['client', 'tutor'])],
 		[check('subject').isIn(subjects)],
 		[check('level').isIn(levels)],
 		function(req, res) {
