@@ -335,8 +335,16 @@ module.exports = function(app) {
 				}
 				db.query(sqlQuery, params, (err, result) => {
 					if (err) console.log(err);
-					else {
-						res.send[result];
+					else if (result.isEmpty()) {
+						res.json({
+							outcome: 'success',
+							result: 'Nothing found'
+						})
+					} else {
+						res.json({
+							outcome: 'success',
+							result: result
+						});
 					}
 				})
 			}
