@@ -261,8 +261,8 @@ module.exports = function(app) {
 		function(req, res) {
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
-				for (anError of errors.errors) {
-					console.log(anErr.param);
+				for (let anError of errors.errors) {
+					console.log(anError.param);
 				}
 				res.json({
 					outcome: 'failure',
