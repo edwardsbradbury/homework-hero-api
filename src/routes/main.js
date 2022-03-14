@@ -253,12 +253,10 @@ module.exports = function(app) {
 	// Route for users to record a subject which either they need help with (client type user) or can teach (tutor type user)
 
 	app.post('/add_subject', isAuth,
-		// [check('userId').isInt({min: 1})],
 		[check('first').matches(nameRegex)],
 		[check('last').matches(nameRegex)],
-		// [check('subject').matches(subjectRegex)],
+		[check('userType').isIn(['client', 'tutor'])]
 		[check('subject').isIn(subjects)],
-		// [check('level').matches(studyLevelRegex)],
 		[check('level').isIn(levels)],
 		function(req, res) {
 			const errors = validationResult(req);
@@ -270,7 +268,8 @@ module.exports = function(app) {
 			} else {
 				const id = req.sanitize(req.body.id);
 				const first = req.sanitize(req.body.first);
-				const last = req.sanitize(req.body.last)
+				const last = req.sanitize(req.body.last);
+				const userType = req.sanitize(req.body.userType);
 				const subject = req.sanitize(req.body.subject);
 				const level = req.sanitize(req.body.level);
 				if (!(id && first && last && subject && level)) {
@@ -279,7 +278,7 @@ module.exports = function(app) {
 						error: 'Missing data'
 					});
 				} else {
-					let sqlQuery = 'INSERT INTO userSubjectLevel (userId, first, last, subject, level) VALUES (?, ?, ?, ?, ?)';
+					let sqlQuery = 'INSERT INTO userSubjectLevel (userId, first, last, userType, subject, level) VALUES (?, ?, ?, ?, ?, ?)';
 					db.query(sqlQuery, [id, first, last, subject, level], (err, result) => {
 						if (err) {
 							res.json({
