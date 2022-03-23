@@ -56,7 +56,7 @@ module.exports = function(app) {
 		function (req, res) {
 
 			/* Whether the Express validator raised any errors (invalid names, email or password) determines whether the form data is posted to database or not.
-				If not, error prompts will be sent back to frontend to be displayed to user. Although data is validated before sending from frontend, we still need to
+				If not, error prompts will be sent back to frontend to be displayed to user. Although data is validated before sending from frontend, I still need to
 				validate it again because somebody could change it in-transit (using browser developer tools) and potentially crash the server or get access to the db */
 			const errors = validationResult(req);
 			if (!errors.isEmpty() || !(req.body.userType === 'client' || req.body.userType === 'tutor')) {
@@ -77,7 +77,7 @@ module.exports = function(app) {
 			} else {
 				// Form input all passed the validation checks
 
-				// Check there's not already a user record in db with the email address (we don't want duplicate accounts)
+				// Check there's not already a user record in db with the email address (don't want duplicate accounts)
 				const checkAlreadyExists = 'SELECT email1 FROM users WHERE email1 = ?;';
 				const email1 = req.sanitize(req.body.email1);
 
@@ -87,7 +87,7 @@ module.exports = function(app) {
 							outcome: 'failure',
 							error: 'checking db for existing user failed'
 						})
-					// If there's a result from the database, we know there's already a user account with that username
+					// If there's a result from the database, I know there's already a user account with that email1 value
 					} else if (result.length > 0) {
 						// Send message back to frontend
 						res.json({

@@ -14,7 +14,7 @@ const bcrypt = require('bcrypt');
     be granted access to the data at that route.
     
     Note that the username & password are retrieved from the session store in the database - they're
-    not user input sent with the HTTP request. Effectively we're checking that the user's session credentials
+    not user input sent with the HTTP request. Effectively I'm checking that the user's session credentials
     match their credentials in the users table */
 const verifyCallback = (username, password, done) => {
     

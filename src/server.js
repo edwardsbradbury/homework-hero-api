@@ -20,7 +20,7 @@ const cors = require('cors');
 // Create new Express app instance
 const app = express();
 /* Necessary configuration due to how Heroku handles requests via SSL: when requests are sent to https://homework-hero-api.herokuapp.com the SSL
-    terminates at the Heroku dyno and request is proxied to this Express server. We use secure cookies for session management, which means that
+    terminates at the Heroku dyno and request is proxied to this Express server. I use secure cookies for session management, which means that
     browsers need to send their requests via HTTPS & the server setting the cookies (i.e. this file) must send its responses via HTTPS */
 app.set('trust proxy', 1);
 
