@@ -43,6 +43,8 @@ module.exports = function(app) {
 	// Route to receive registration form data, sanitize it, then post it to the database
 
 	app.post('/register',
+
+		// Check input using validators
 		[check('userType').isAlpha().isLength({max: 6}).withMessage('userTypeInvalid')],
 		[check('first').matches(nameRegex).withMessage('firstNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
 		[check('last').matches(nameRegex).withMessage('lastNameInvalid').isLength({min: 2, max: 30}).withMessage('nameLength')],
@@ -50,109 +52,110 @@ module.exports = function(app) {
 		[check('dob').isDate().withMessage('dobInvalid')],
 		[check('email2').matches(emailRegex).withMessage('emailInvalid').isLength({max: 100}).withMessage('email2Length')],
 		[check('password').isStrongPassword().withMessage('passwordStrength').isLength({max: 20}).withMessage('passwordLength')],
+		
 		function (req, res) {
 
-		/* Whether the Express validator raised any errors (invalid names, email or password) determines whether the form data is posted to database or not.
-			If not, error prompts will be sent back to frontend to be displayed to user. Although data is validated before sending from frontend, we still need to
-			validate it again because somebody could change it in-transit (using browser developer tools) and potentially crash the server or get access to the db */
-    const errors = validationResult(req);
-		if (!errors.isEmpty() || !(req.body.userType === 'client' || req.body.userType === 'tutor')) {
-			let errMessages = [];
-			for (let anError of errors.errors) {
-				errMessages.push(anError.msg);
+			/* Whether the Express validator raised any errors (invalid names, email or password) determines whether the form data is posted to database or not.
+				If not, error prompts will be sent back to frontend to be displayed to user. Although data is validated before sending from frontend, we still need to
+				validate it again because somebody could change it in-transit (using browser developer tools) and potentially crash the server or get access to the db */
+			const errors = validationResult(req);
+			if (!errors.isEmpty() || !(req.body.userType === 'client' || req.body.userType === 'tutor')) {
+				let errMessages = [];
+				for (let anError of errors.errors) {
+					errMessages.push(anError.msg);
+				}
+				if (req.body.password !== req.body.confirm) {
+					errMessages.push('mismatchedPasswords');
+				}
+				// if (!(req.body.userType === 'client' || req.body.userType === 'tutor')) {
+				// 	errMessages.push('generalError');
+				// }
+				res.json({
+					outcome: 'failure',
+					error: errMessages
+				})
+			} else {
+				// Form input all passed the validation checks
+
+				// Check there's not already a user record in db with the email address (we don't want duplicate accounts)
+				const checkAlreadyExists = 'SELECT email1 FROM users WHERE email1 = ?;';
+				const email1 = req.sanitize(req.body.email1);
+
+				db.query(checkAlreadyExists, [email1], (error, result) => {
+					if (error) {
+						res.json({
+							outcome: 'failure',
+							error: 'checking db for existing user failed'
+						})
+					// If there's a result from the database, we know there's already a user account with that username
+					} else if (result.length > 0) {
+						// Send message back to frontend
+						res.json({
+							outcome: 'failure',
+							error: 'user already exists'
+						})
+					
+					// At this point, form input passed validation & username isn't already associated wtih an account
+					} else {
+
+						// Store the form data from the frontend registration form
+						const userType = req.sanitize(req.body.userType);
+						const first = req.sanitize(req.body.first);
+						const last = req.sanitize(req.body.last);
+						const dob = req.sanitize(req.body.dob);
+						const email2 = req.sanitize(req.body.email2);
+						const password = req.sanitize(req.body.password);
+
+						// Create SQL query string
+						let sqlQuery = 'INSERT INTO users (first, last, userType, email1, dob, email2, password) VALUES (?, ?, ?, ?, ?, ?, ?);';
+
+						// Hash the password, then connect to the database and insert new user record in database
+						bcrypt.hash(password, saltRounds, function(err, hashedPassword) {
+							if (err) res.json({
+								outcome: 'failure',
+								error: 'bcrypt failed to hash password'
+							});
+							else {
+								const newRecord = [first, last, userType, email1, dob, email2, hashedPassword];
+								db.query(sqlQuery, newRecord, (someErr, result) => {
+									if (someErr) {
+										res.json({
+											outcome: 'failure',
+											error: 'insertion into db failed'
+										})
+									} else {
+										// Need to get the id property of the record just created & return to frontend with sucsess
+										db.query('SELECT * FROM users WHERE email1 = ?', [email1], (anError, user) => {
+											if (anError) {
+												res.json({
+													outcome: 'failure',
+													error: 'failed to retrieve id of new record'
+												})
+											} else {
+												req.login(user[0], function (someErr) {
+													if (someErr) {
+														res.json({
+															outcome: 'failure',
+															error: 'req.login failed'
+														})
+													} else {
+														// Send confirmation back to frontend
+														res.json({
+															outcome: 'success',
+															userId: user[0].id
+														})
+													}
+												})
+											}
+										});
+									}
+								})
+							}
+						})
+
+					}
+				})
 			}
-			if (req.body.password !== req.body.confirm) {
-				errMessages.push('mismatchedPasswords');
-			}
-			// if (!(req.body.userType === 'client' || req.body.userType === 'tutor')) {
-			// 	errMessages.push('generalError');
-			// }
-			res.json({
-				outcome: 'failure',
-				error: errMessages
-			})
-		} else {
-			// Form input all passed the validation checks
-
-			// Check there's not already a user record in db with the email address (we don't want duplicate accounts)
-			const checkAlreadyExists = 'SELECT email1 FROM users WHERE email1 = ?;';
-			const email1 = req.sanitize(req.body.email1);
-
-			db.query(checkAlreadyExists, [email1], (error, result) => {
-				if (error) {
-		 			res.json({
-						 outcome: 'failure',
-						 error: 'checking db for existing user failed'
-					 })
-				// If there's a result from the database, we know there's already a user account with that username
-		 		} else if (result.length > 0) {
-		 			// Send message back to frontend
-		 			res.json({
-						 outcome: 'failure',
-						 error: 'user already exists'
-					 })
-				
-		 		// At this point, form input passed validation & username isn't already associated wtih an account
-		 		} else {
-
-		 			// Store the form data from the frontend registration form
-					const userType = req.sanitize(req.body.userType);
-		 			const first = req.sanitize(req.body.first);
-		 			const last = req.sanitize(req.body.last);
-					const dob = req.sanitize(req.body.dob);
-					const email2 = req.sanitize(req.body.email2);
-		 			const password = req.sanitize(req.body.password);
-
-		 			// Create SQL query string
-		 			let sqlQuery = 'INSERT INTO users (first, last, userType, email1, dob, email2, password) VALUES (?, ?, ?, ?, ?, ?, ?);';
-
-		 			// Hash the password, then connect to the database and insert new user record in database
-		 			bcrypt.hash(password, saltRounds, function(err, hashedPassword) {
-		 				if (err) res.json({
-							 outcome: 'failure',
-							 error: 'bcrypt failed to hash password'
-						 });
-		 				else {
-							const newRecord = [first, last, userType, email1, dob, email2, hashedPassword];
-		 					db.query(sqlQuery, newRecord, (someErr, result) => {
-		 						if (someErr) {
-									res.json({
-										outcome: 'failure',
-										error: 'insertion into db failed'
-									})
-		 						} else {
-									// Need to get the id property of the record just created & return to frontend with sucsess
-									db.query('SELECT * FROM users WHERE email1 = ?', [email1], (anError, user) => {
-										if (anError) {
-											res.json({
-												outcome: 'failure',
-												error: 'failed to retrieve id of new record'
-											})
-										} else {
-											req.login(user[0], function (someErr) {
-												if (someErr) {
-													res.json({
-														outcome: 'failure',
-														error: 'req.login failed'
-													})
-												} else {
-													// Send confirmation back to frontend
-													res.json({
-														outcome: 'success',
-														userId: user[0].id
-													})
-												}
-											})
-										}
-									});
-		 						}
-		 					})
-		 				}
-		 			})
-
-		 		}
-			})
-		}
 
   })
 
@@ -160,80 +163,86 @@ module.exports = function(app) {
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route to receive login credentials from frontend, check them against the database and send result back to frontend
 	app.post('/login',
+
+		// Check input using validator
 		[check('email').matches(emailRegex).withMessage('emailInvalid')],
 		[check('password').isStrongPassword().withMessage('passwordInvalid')],
+
 		function (req, res) {
 		
-		const errors = validationResult(req);
-		if (!errors.isEmpty()) {
-			let errMessages = [];
-            for (let anError of errors.errors) {
-                errMessages.push(anError.msg);
-            }
-			res.json({
-				outcome: 'failure',
-				error: errMessages
-			})
-		} else {
-			// Store the credentials sent from frontend. See comment above bodyParser in server/src/app.js for more info about how data is passed from frontend
-      const email = req.sanitize(req.body.email);
-      const password = req.sanitize(req.body.password);
-      // Construct SQL 'prepared statement' to search the database for a record with matching email address
-			const sqlQuery = 'SELECT * FROM users WHERE email1 = ?;';
-		
-			// Execute the SQL query to retrieve matching record (if there is one)
-		 	db.query(sqlQuery, [email], (err, result) => {
-			 	if (err) {
-					res.json({
-						outcome: 'failure',
-						error: 'checking db for user failed'
-					})
-		 		// If the result variable is empty, no records were found in the database with matching username
-			 	} else if (result.length < 1) {
-					res.json({
-						outcome: 'failure',
-						error: 'user not found'
-					})
-		 		} else {
-			 	// Check the password from the matching db record
-		 			const passwordFromRecord = result[0].password;
-			 		bcrypt.compare(password, passwordFromRecord, function (error, passResult) {
-						if (error) {
-							res.json({
-								outcome: 'failure',
-								error: 'bcrypt.compare caused an error'
-							})
-			 			} else if (passResult === false) {
-			 				// Passwords didn't match - send failure message back to frontend
-							res.json({
-								outcome: 'failure',
-								error: 'incorrect password'
-							})
-			 			} else {
-							// Try to create a user session record
-							req.login(result[0], function(anErr) {
-								if (anErr) {
-									res.json({
-										outcome: 'failure',
-										error: 'req.login failed'
-									})
-								} else {
-									// Send success message back to frontend
-									res.json({
-										outcome: 'success',
-										userId: result[0].id,
-										userType: result[0].userType,
-										first: result[0].first,
-										last: result[0].last
-									})
-								}
-							})
-						}
-			 		})
-		 		}
-			})
-		
-		}
+			const errors = validationResult(req);
+			// If some input sent from frontend failed validation
+			if (!errors.isEmpty()) {
+				let errMessages = [];
+							for (let anError of errors.errors) {
+									errMessages.push(anError.msg);
+							}
+				// Return error messages to frontend
+				res.json({
+					outcome: 'failure',
+					error: errMessages
+				})
+			// The data received from frontend end is a valid email and password
+			} else {
+				// Store the credentials sent from frontend. See comment above bodyParser in server/src/app.js for more info about how data is passed from frontend
+				const email = req.sanitize(req.body.email);
+				const password = req.sanitize(req.body.password);
+				// Construct SQL 'prepared statement' to search the database for a record with matching email address
+				const sqlQuery = 'SELECT * FROM users WHERE email1 = ?;';
+			
+				// Execute the SQL query to retrieve matching record (if there is one)
+				db.query(sqlQuery, [email], (err, result) => {
+					if (err) {
+						res.json({
+							outcome: 'failure',
+							error: 'checking db for user failed'
+						})
+					// If the result variable is empty, no records were found in the database with matching username
+					} else if (result.length < 1) {
+						res.json({
+							outcome: 'failure',
+							error: 'user not found'
+						})
+					} else {
+					// Check the password from the matching db record
+						const passwordFromRecord = result[0].password;
+						bcrypt.compare(password, passwordFromRecord, function (error, passResult) {
+							if (error) {
+								res.json({
+									outcome: 'failure',
+									error: 'bcrypt.compare caused an error'
+								})
+							} else if (passResult === false) {
+								// Passwords didn't match - send failure message back to frontend
+								res.json({
+									outcome: 'failure',
+									error: 'incorrect password'
+								})
+							} else {
+								// Try to create a user session record
+								req.login(result[0], function(anErr) {
+									if (anErr) {
+										res.json({
+											outcome: 'failure',
+											error: 'req.login failed'
+										})
+									} else {
+										// Send success message back to frontend
+										res.json({
+											outcome: 'success',
+											userId: result[0].id,
+											userType: result[0].userType,
+											first: result[0].first,
+											last: result[0].last
+										})
+									}
+								})
+							}
+						})
+					}
+				})
+			
+			}
 	})
 
 
@@ -251,33 +260,42 @@ module.exports = function(app) {
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route for users to record a subject which either they need help with (client type user) or can teach (tutor type user)
+	// used by Onboarding UI component upon successful new registration and maybe later a Profile component
 
 	app.post('/add_subject', isAuth,
+
+		// Check data from frontend using validators
 		[check('first').matches(nameRegex)],
 		[check('last').matches(nameRegex)],
 		[check('userType').isIn(['client', 'tutor'])],
 		[check('subject').isIn(subjects)],
 		[check('level').isIn(levels)],
+
 		function(req, res) {
+
 			const errors = validationResult(req);
+			// If any validators failed, send error message back to UI
 			if (!errors.isEmpty()) {
 				res.json({
 					outcome: 'failure',
 					error: 'Invalid data'
 				});
 			} else {
+				// Data from UI is safe but some values could be missing
 				const id = req.sanitize(req.body.id);
 				const first = req.sanitize(req.body.first);
 				const last = req.sanitize(req.body.last);
 				const userType = req.sanitize(req.body.userType);
 				const subject = req.sanitize(req.body.subject);
 				const level = req.sanitize(req.body.level);
+				// If any data is missing, return error message to UI
 				if (!(id && first && last && subject && level)) {
 					res.json({
 						outcome: 'failure',
 						error: 'Missing data'
 					});
 				} else {
+					// All data is present and valid, insert it into the database
 					let sqlQuery = 'INSERT INTO userSubjectLevel (userId, first, last, userType, subject, level) VALUES (?, ?, ?, ?, ?, ?)';
 					const params = [id, first, last, userType, subject, level];
 					db.query(sqlQuery, params, (err, result) => {
@@ -300,9 +318,14 @@ module.exports = function(app) {
 	// Route to search the database for members (either tutors or clients) based on subject and/or level of study parameters
 
 	app.post('/search',
+
+		// Basic validation of data from frontend
 		[check('userType').isIn(['client', 'tutor'])],
 		[check('subject').isIn(subjects)],
+
 		function (req, res) {
+
+			// If any data failed validation, send error message back to frontend
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
 				res.json({
@@ -310,37 +333,48 @@ module.exports = function(app) {
 					error: 'Invalid data'
 				})
 			} else {
+
 				const type = req.sanitize(req.body.userType);
 				const subject = req.sanitize(req.body.subject);
 				const level = req.sanitize(req.body.level);
+
+				// If the user's a client, search needs to return tutors and if user's a tutor, search should return clients
 				let findThese = type === 'client' ? 'tutor' : 'client';
 				let sqlQuery = `SELECT * FROM usersubjectlevel WHERE userType = '${findThese}' AND `;
 				let params = [];
+
+				// If user's a client, need to search for tutors teaching at appropriate level
 				if (type === 'client') {
-					if (!(subject && level)) {
+					// Hence if either value is missing or unrecognised, return error to UI
+					if (!(subject && level) || !subjects.includes(subject)) {
 						res.json({
 							outcome: 'failure',
 							error: 'Missing search param'
 						})
 					} else {
+						// Finish writing SQL paramaterised query
 						sqlQuery += 'subject = ? AND level = ?;';
 						params.push(subject, level);
 					}
 				} else if (type === 'tutor' && (subject && level)) {
+					// Tutors can search for clients who need teaching to a particular level in a subject
 					sqlQuery += 'subject = ? AND level = ?;';
 					params.push(subject, level);
 				} else {
+					// Or they can search for all clients needing help at all levels in a particular subject
 					sqlQuery += 'subject = ?;';
 					params.push(subject);
 				}
 				db.query(sqlQuery, params, (err, result) => {
 					if (err) console.log(err);
 					else if (result.length < 1) {
+						// No users matched search criteria
 						res.json({
 							outcome: 'success',
 							result: 'Nothing found'
 						})
 					} else {
+						// Send results to UI
 						res.json({
 							outcome: 'success',
 							result: result
@@ -350,107 +384,6 @@ module.exports = function(app) {
 			}
 		}
 	)
-
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Process new Requests for help (validate, sanitize and push to database)
-
-	// app.post('/new-request', isAuth, [check('userId').isInt({min:1}).withMessage('generalError')], [check('username').matches(usernameRegex).withMessage('generalError').isLength({min: 8, max: 25}).withMessage('generalError')], [check('userLang').matches(userLangRegex).withMessage('generalError')], [check('subject').matches(subjectRegex).withMessage('subjectInvalid')], [check('studyLevel').matches(studyLevelRegex).withMessage('studyLevelInvalid')], [check('dueDate').isDate().withMessage('generalError')], [check('request').isLength({max: 750}).withMessage('requestLength')], [check('datePosted').isDate().withMessage('generalError')], [check('timePosted').matches(timeFormatRegex).withMessage('generalError')], function (req, res) {
-		
-	// 	// We need to validate that the homework due date sent from the frontend isn't before the current date
-	// 	const today = new Date();
-	// 	today.setHours(0, 0, 0, 0);
-	// 	const tempDueDate = new Date(req.body.dueDate);
-	// 	const tempDatePosted = new Date(req.body.datePosted);
-	// 	const datePostedInvalid = tempDatePosted < today;
-	// 	const dueDateInvalid = tempDueDate < today;
-
-	// 	const errors = validationResult(req);
-  //       if (!errors.isEmpty()) {
-  //           let errMessages = [];
-  //           for (let anError of errors.errors) {
-  //               errMessages.push(anError.msg);
-  //           }
-	// 		res.send(errMessages);
-	// 	} else if (dueDateInvalid) {
-	// 			res.send('dueDateInvalid');
-	// 	} else if (datePostedInvalid) {
-	// 			res.send('generalError');
-	// 	} else {
-	// 		// Check the userId & username correspond to a registered user (somebody could just change them in browser devtools & create a load of requests otherwise)
-	// 		const userId = req.sanitize(req.body.userId);
-	// 		const username = req.sanitize(req.body.username);
-	// 		const userQuery = 'SELECT * FROM users WHERE id = ? AND username = ?;';
-			
-	// 		db.query(userQuery, [userId, username], (error, result) => {
-	// 			if (error) {
-	// 				res.send(['generalError']);
-	// 			} else if (!(result.length > 0)) {
-	// 			// No user record with the userId & username received from frontend - user might've used browser devtools to send bogus data
-	// 				res.send(['generalError']);
-	// 			} else {
-	// 			// User is legit
-	// 				let insertQuery = 'INSERT INTO requests(userId, username, userLang, subject, studyLevel, dueDate, request, datePosted, timePosted) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);';
-	// 				const userLang = req.sanitize(req.body.userLang);
-	// 				const subject = req.sanitize(req.body.subject);
-	// 				const studyLevel = req.sanitize(req.body.studyLevel);
-	// 				const dueDate = req.sanitize(req.body.dueDate);
-	// 				const request = req.sanitize(req.body.request);
-	// 				const datePosted = req.sanitize(req.body.datePosted);
-	// 				const timePosted = req.sanitize(req.body.timePosted);
-	// 				const newRequest = [userId, username, userLang, subject, studyLevel, dueDate, request, datePosted, timePosted];
-					
-	// 				db.query(insertQuery, newRequest, (anError, result) => {
-	// 					if (anError) {
-	// 						res.send(['generalError']);
-	// 					} else {
-	// 						res.send(['success']);
-	// 					}
-	// 				})
-	// 			}
-	// 		})
-
-	// 	}
-
-
-	// })
-
-
-	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// // Retrieve all help Requests in database and return to frontend
-
-	// app.get('/all-requests', isAuth, function (req, res) {
-		
-	// 	const query = 'SELECT * FROM requests';
-
-	// 	db.query(query, (err, result) => {
-	// 		if (err) {
-	// 			res.send(['generalError']);
-	// 		} else if (result.length < 1) {
-	// 			res.send(['noRequests']);
-	// 		} else {
-	// 			res.send(result);
-	// 		}
-	// 	})
-
-	// })
-	
-
-	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// // Delete a Request for help from the database
-
-	// app.delete('/delete-request/:id', isAuth, function (req, res){
-	// 	const requestId = req.params.id;
-	// 	const query = 'DELETE FROM requests WHERE requestId = ?;';
-
-	// 	db.query(query, [requestId], (err, result) => {
-	// 		if (err) {
-	// 			console.log(err);
-	// 			res.send(['deletionFailed']);
-	// 		} else {
-	// 			res.send(['success']);
-	// 		}
-	// 	})
-	// })
 
 	
 	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -500,7 +433,7 @@ module.exports = function(app) {
 
 
 	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// // Retrieve a user's chats/conversations and send them to the frontend Vue app
+	// // Retrieve a user's chats/conversations and send them to the React UI
 
 	// app.get('/conversations', isAuth, function (req, res) {
 		
@@ -540,7 +473,7 @@ module.exports = function(app) {
 	
 
 	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// // Retrieve an updated (when a new reply has been sent) list of messages in a conversation and send back to frontend Vue app
+	// // Retrieve an updated (when a new reply has been sent) list of messages in a conversation and send back to the React UI
 
 	// app.get('/messages', isAuth, function (req, res) {
 

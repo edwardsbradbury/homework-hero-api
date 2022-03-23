@@ -1,6 +1,6 @@
-/* Configuration settings for the Passportjs authentication & authorization library which we'll use
-    to prevent HTTP requests to the API from unauthenticated clients (e.g. a user of the frontend Vue
-    app has been inactive too long and session has timed out or somebody more malicious is trying to
+/* Configuration settings for the Passportjs authentication & authorization library which I'm using
+    to prevent HTTP requests to the API from unauthenticated clients (e.g. a user of the React UI
+    has been inactive too long and session has timed out or somebody more malicious is trying to
     connect to this Express API) */
 
 // Import the dependancies

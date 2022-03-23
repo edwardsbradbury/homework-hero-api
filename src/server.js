@@ -19,7 +19,7 @@ const cors = require('cors');
 
 // Create new Express app instance
 const app = express();
-/* Necessary configuration due to how Heroku handles requests via SSL: when requests are sent to https://lessonup-api.herokuapp.com the SSL
+/* Necessary configuration due to how Heroku handles requests via SSL: when requests are sent to https://homework-hero-api.herokuapp.com the SSL
     terminates at the Heroku dyno and request is proxied to this Express server. We use secure cookies for session management, which means that
     browsers need to send their requests via HTTPS & the server setting the cookies (i.e. this file) must send its responses via HTTPS */
 app.set('trust proxy', 1);
@@ -28,13 +28,13 @@ app.set('trust proxy', 1);
 app.use(express.urlencoded({extended: true}));
 
 /* Middleware to allow route callback functions (in main.js) to receive data from frontend as JSON { key: value } objects
-    e.g. in the Login.vue frontend component, Login.login() sends { email: <what the user input> , password: <what the user input>} to the
+    e.g. in the Login UI component, submitLogin() sends { email: <what the user input> , password: <what the user input>} to the
     /login route in main.js on the server. Inside the route's callback function, req.body.email and req.body.password are the user input values
     from the object sent from the frontend */
 app.use(express.json());
 
-/* Middleware telling callback functions for routes in main.js to accept HTTPS requests from our Vue frontend app running at the URL below
-    https://lessonup.herokuapp.com */
+/* Middleware telling callback functions for routes in main.js to accept HTTPS requests from my React UI running at the URL below
+    https://www.homework-hero.co.uk */
 app.use(cors({
         credentials: true,
         origin: 'https://www.homework-hero.co.uk',
