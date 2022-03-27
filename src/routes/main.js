@@ -298,7 +298,7 @@ module.exports = function(app) {
 					// All data is present and valid, insert it into the database
 					let sqlQuery = 'INSERT INTO userSubjectLevel (userId, first, last, userType, subject, level) VALUES (?, ?, ?, ?, ?, ?)';
 					const params = [id, first, last, userType, subject, level];
-					db.query(sqlQuery, params, (err, result) => {
+					db.query(sqlQuery, params, (err) => {
 						if (err) {
 							res.json({
 								outcome: 'failure',
@@ -386,50 +386,71 @@ module.exports = function(app) {
 	)
 
 	
-	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// // Save a new message to the database
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Save a new message to the database
 
-	// app.post('/new-message', isAuth, [check('requestId').isInt({min: 1}).withMessage('generalError')], [check('userLang').matches(userLangRegex).withMessage('generalError')], [check('sender').matches(usernameRegex).withMessage('generalError').isLength({min: 8, max: 25}).withMessage('generalError')], [check('recipient').matches(usernameRegex).withMessage('generalError').isLength({min: 8, max: 25}).withMessage('generalError')], [check('message').isLength({min: 2, max: 500}).withMessage('lengthError')], [check('dateSent').isDate().withMessage('generalError')], [check('timeSent').matches(timeFormatRegex).withMessage('generalError')], function (req, res) {
+	app.post('/new_message', isAuth,
+	
+		// Check data from frontend using validators
+		[check('sender').isInt({min: 1}).withMessage('Invalid sender id')],
+		[check('recipient').isInt({min: 1}).withMessage('Invalid sender id')],
+		[check('sent').isDate().withMessage('Invalid sent date')],
+		[check('message').isLength({min: 2, max: 500}).withMessage('Invalid message length')],
+		
+		function (req, res) {
 
-	// 	// We need to validate that the message sent date from the frontend isn't before the current date
-  //       const today = new Date();
-  //       today.setHours(0, 0, 0, 0);
-  //       const tempDateSent = new Date(req.body.dateSent);
-  //       const dateSentInvalid = tempDateSent < today;
+			// We need to validate that the message sent date from the frontend isn't before the current date
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
+			const tempDateSent = new Date(req.body.sent);
+			const dateSentInvalid = tempDateSent < today;
 
-	// 	const errors = validationResult(req);
-  //       if (!errors.isEmpty()) {
-  //           let errMessages = [];
-  //           for (let anError of errors.errors) {
-	// 			console.log(anError.param);
-  //               errMessages.push(anError.msg);
-  //           }
-  //           res.send(errMessages);
-	// 	} else if (dateSentInvalid) {
-	// 		res.send(['generalError']);
-	// 	} else {
-			
-	// 		let query = 'INSERT INTO messages(requestId, language, sender, recipient, message, dateSent, timeSent) VALUES(?, ?, ?, ?, ?, ?, ?);';
-	// 		const requestId = req.sanitize(req.body.requestId);
-	// 		const language = req.sanitize(req.body.userLang);
-	// 		const sender = req.sanitize(req.body.sender);
-	// 		const recipient = req.sanitize(req.body.recipient);
-	// 		const message = req.sanitize(req.body.message);
-	// 		const dateSent = req.sanitize(req.body.dateSent);
-	// 		const timeSent = req.sanitize(req.body.timeSent);
-	// 		const newMessage = [requestId, language, sender, recipient, message, dateSent, timeSent];
+			const errors = validationResult(req);
+			// If any data failed validation, return appropriate error messages to UI
+			if (!errors.isEmpty()) {
+				let errMessages = [];
+				for (let anError of errors.errors) {
+					console.log(anError.param);
+					errMessages.push(anError.msg);
+				}
+				res.json(
+					{
+						outcome: 'failure',
+						error: errMessages
+					});
+			} else if (dateSentInvalid) {
+				res.json(
+					{
+					outcome: 'failure',
+					error: 'Invalid sent date'
+				});
+			} else {
+				
+				let query = 'INSERT INTO messages(senderId, recipId, sent, message) VALUES(?, ?, ?, ?);';
+				const sender = req.sanitize(req.body.sender);
+				const recipient = req.sanitize(req.body.recipient);
+				const sent = req.sanitize(req.body.sent);
+				const message = req.sanitize(req.body.message);
+				const newMessage = [requestId, language, sender, recipient, sent, message];
 
-	// 		db.query(query, newMessage, (error, result) => {
-	// 			if (error) {
-	// 				console.log("SQL insertion error");
-	// 				res.send(['generalError']);
-	// 			} else {
-	// 				res.send(['success']);
-	// 			}
-	// 		})
-	// 	}
+				db.query(query, newMessage, (error) => {
+					if (error) {
+						console.log('SQL insertion error');
+						res.json(
+							{
+								outcome: 'failure',
+								error: 'DB insertion failed'
+							});
+					} else {
+						res.json(
+							{
+								outcome: 'success'
+							});
+					}
+				})
+			}
 
-	// })
+	})
 
 
 	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
