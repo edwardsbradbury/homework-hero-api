@@ -394,7 +394,7 @@ module.exports = function(app) {
 		// Check data from frontend using validators
 		[check('sender').isInt({min: 1}).withMessage('Invalid sender id')],
 		[check('recipient').isInt({min: 1}).withMessage('Invalid sender id')],
-		[check('sent').isDate().withMessage('Invalid sent date')],
+		[check('sent').isISO8601().withMessage('Invalid sent date')],
 		[check('message').isLength({min: 2, max: 500}).withMessage('Invalid message length')],
 		
 		function (req, res) {
