@@ -435,7 +435,8 @@ module.exports = function(app) {
 
 				db.query(query, newMessage, (error) => {
 					if (error) {
-						console.log('SQL insertion error');
+						// console.log('SQL insertion error');
+						console.log(error);
 						res.json(
 							{
 								outcome: 'failure',
