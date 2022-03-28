@@ -431,7 +431,7 @@ module.exports = function(app) {
 				const recipient = req.sanitize(req.body.recipient);
 				const sent = req.sanitize(req.body.sent);
 				const message = req.sanitize(req.body.message);
-				const newMessage = [requestId, language, sender, recipient, sent, message];
+				const newMessage = [sender, recipient, sent, message];
 
 				db.query(query, newMessage, (error) => {
 					if (error) {
