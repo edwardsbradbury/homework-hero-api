@@ -399,7 +399,7 @@ module.exports = function(app) {
 		
 		function (req, res) {
 
-			// We need to validate that the message sent date from the frontend isn't before the current date
+			// Need to validate that the message sent date from the frontend isn't before the current date
 			const today = new Date();
 			today.setHours(0, 0, 0, 0);
 			const tempDateSent = new Date(req.body.sent);
@@ -426,6 +426,7 @@ module.exports = function(app) {
 				});
 			} else {
 				
+				// Data passed validation. Sanitize it and prepare SQL parameterised query
 				let query = 'INSERT INTO messages(senderId, recipId, sent, message) VALUES(?, ?, ?, ?);';
 				const sender = req.sanitize(req.body.sender);
 				const recipient = req.sanitize(req.body.recipient);
@@ -433,6 +434,7 @@ module.exports = function(app) {
 				const message = req.sanitize(req.body.message);
 				const newMessage = [sender, recipient, sent, message];
 
+				// Execute query
 				db.query(query, newMessage, (error) => {
 					if (error) {
 						// console.log('SQL insertion error');
@@ -454,44 +456,31 @@ module.exports = function(app) {
 	})
 
 
-	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// // Retrieve a user's chats/conversations and send them to the React UI
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Retrieve a user's chats/conversations and send them to the React UI
 
-	// app.get('/conversations', isAuth, function (req, res) {
+	app.get('/conversations', isAuth, function (req, res) {
 		
-	// 	const username = req.sanitize(req.query.username);
+		const userId = req.sanitize(req.query.userId);
 
-	// 	const queryRequestIds = 'SELECT DISTINCT requestId FROM messages WHERE sender = ? OR recipient = ? ;';
+		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY recipId, senderId ORDER BY id DESC';
+		db.query(query, [userId, userId], (error, result) => {
+			if (error) {
+				console.log(error);
+				res.json({
+					outcome: 'failure',
+					error: 'SQL query error'
+				})
+			} else {
+				res.json({
+					outcome: 'success',
+					messages: result
+				})
+			}
+		})
+	
 
-	// 	db.query(queryRequestIds, [username, username], (error, result) => {
-	// 		if (error) {
-	// 			console.log("Error getting unique requestIds");
-	// 			res.send(['generalError']);
-	// 		} else if (result.length < 1) {
-	// 			console.log("User has no messages");
-	// 			res.send(['noMessages']);
-	// 		} else {
-	// 			/* Conversations will hold arrays of Message objects. Each sub-array in conversations will only contain messages objects which share the
-  //                       		same requestId property - i.e. messages which all relate to one specific Request object will be grouped in their own sub-array */
-	// 			let conversations = [];
-	// 			result.forEach(aResult => {
-	// 				let convoQuery = `SELECT * FROM messages WHERE requestId = ${aResult.requestId} AND (sender = ? OR recipient = ?);`;
-	// 				db.query(convoQuery, [username, username], (err, outcome) => {
-  //                       if (err) {
-	// 						console.log("Error getting conversations");
-  //                           res.send(['generalError']);
-  //                       } else {
-  //                           conversations.push(outcome);
-	// 						if (aResult === result[result.length - 1]) {
-	// 							res.send(conversations);
-	// 						}
-  //                       }
-  //                   })
-	// 			})
-	// 		}
-	// 	})
-
-	// })
+	})
 	
 
 	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -536,3 +525,4 @@ module.exports = function(app) {
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
+ 
