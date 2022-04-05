@@ -473,7 +473,8 @@ module.exports = function(app) {
 		let conversations = [];
 		db.query(participantsQuery, [userId, userId], (error, results) => {
 			if (error) {console.log(error)}
-			else {userPairs.push(results)};
+			// else {userPairs.push(results)};
+			userPairs = results;
 		})
 		console.log('userPairs:')
 		console.log(userPairs);
