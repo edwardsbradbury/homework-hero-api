@@ -467,7 +467,7 @@ module.exports = function(app) {
 			trying to group together messages with the same participants	*/
 		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY recipId, senderId ORDER BY id DESC;';
 		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
-		const query = 'SELECT DISTINCT senderId, recipId FROM messages WHERE WHERE senderId = ? OR recipId = ?;';
+		const query = 'SELECT DISTINCT senderId, recipId FROM messages WHERE senderId = ? OR recipId = ?;';
 		db.query(query, [userId, userId], (error, results) => {
 			if (error) {console.log(error)}
 			else {console.log(results)};
