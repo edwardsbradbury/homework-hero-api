@@ -500,7 +500,8 @@ module.exports = function(app) {
 							conversations.push(convMessages);
 							convMessages = [];
 						}
-						[partic1, partic2] = [result[i].senderId, result[i].recipId];
+						partic1 = result[i].senderId;
+						partic2 = result[i].recipId;
 						convMessages.push(result[i]);
 						if (i = result.length - 1) {
 							conversations.push(convMessages);
