@@ -491,8 +491,10 @@ module.exports = function(app) {
 					if ((result[i].senderId === partic1 || result[i].senderId === partic2) && (result[i].recipId === partic1 || result[i].reciptId === partic2)) {
 						convMessages.push(result[i]);
 					} else {
-						conversations.push(convMessages);
-						convMessages = [];
+						if (convMessages.length > 0) {
+							conversations.push(convMessages);
+							convMessages = [];
+						}
 						[partic1, partic2] = [result[i].senderId, result[i].recipId];
 						convMessages.push(result[i]);
 						if (i = result.length - 1) {
