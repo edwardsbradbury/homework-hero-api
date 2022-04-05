@@ -490,6 +490,8 @@ module.exports = function(app) {
 				let convMessages = [];
 				let partic1 = result[0].senderId;
 				let partic2 = result[0].recipId;
+				console.log(`partic1: ${partic1}`);
+				console.log(`partic2: ${partic2}`);
 				for (let i = 0; i < result.length; i++) {
 					if ((result[i].senderId === partic1 || result[i].senderId === partic2) && (result[i].recipId === partic1 || result[i].reciptId === partic2)) {
 						convMessages.push(result[i]);
