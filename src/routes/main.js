@@ -482,6 +482,8 @@ module.exports = function(app) {
 					conversations: result
 				})
 			} else {
+				console.log('Result:');
+				console.log(result);
 				// Sort the array of messages into sub-arrays of conversations
 				let conversations = [];
 				let convMessages = [];
