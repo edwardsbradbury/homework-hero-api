@@ -468,9 +468,9 @@ module.exports = function(app) {
 		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY recipId, senderId ORDER BY id DESC;';
 		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
 		const participantsQuery = 'SELECT DISTINCT LEAST(senderId, recipId) AS part1, GREATEST(senderId, recipId) AS part2 FROM messages WHERE senderId = ? OR recipId = ?;';
-		const userPairs = [];
+		let userPairs = [];
 		// const convoQuery = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY recipId, senderId ORDER BY id DESC;';
-		const conversations = [];
+		let conversations = [];
 		db.query(participantsQuery, [userId, userId], (error, results) => {
 			if (error) {console.log(error)}
 			else {userPairs.push(results)};
