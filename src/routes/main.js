@@ -467,11 +467,22 @@ module.exports = function(app) {
 			trying to group together messages with the same participants	*/
 		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY recipId, senderId ORDER BY id DESC;';
 		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
-		const query = 'SELECT DISTINCT LEAST(senderId, recipId), GREATEST(senderId, recipId) FROM messages WHERE senderId = ? OR recipId = ?;';
-		db.query(query, [userId, userId], (error, results) => {
+		const participantsQuery = 'SELECT DISTINCT LEAST(senderId, recipId) AS part1, GREATEST(senderId, recipId) AS part2 FROM messages WHERE senderId = ? OR recipId = ?;';
+		const userPairs = [];
+		// const convoQuery = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY recipId, senderId ORDER BY id DESC;';
+		const conversations = [];
+		db.query(participantsQuery, [userId, userId], (error, results) => {
 			if (error) {console.log(error)}
-			else {console.log(results)};
+			else {userPairs.push(results)};
 		})
+		userPairs.forEach(pair => {
+			const convoQuery = `SELECT * FROM messages WHERE senderId IN (${pair.part1, pair.part2}) AND recipId IN (${pair.part1, pair.part2}) ORDER BY id DESC;`;
+			db.query(convoQuery, (error, results) => {
+				if (error) {console.log(error)}
+				else {conversations.push(results)}
+			})
+		})
+		console.log(conversations);
 		// Execute query
 		// db.query(query, [userId, userId], (error, result) => {
 		// 	// Something's gone wrong
