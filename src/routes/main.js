@@ -474,7 +474,7 @@ module.exports = function(app) {
 		db.query(participantsQuery, [userId, userId], (error, results) => {
 			if (error) {console.log(error)}
 			// else {userPairs.push(results)};
-			userPairs = results;
+			else {userPairs = results;}
 		})
 		console.log('userPairs:')
 		console.log(userPairs);
