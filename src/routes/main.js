@@ -475,8 +475,11 @@ module.exports = function(app) {
 			if (error) {console.log(error)}
 			else {userPairs.push(results)};
 		})
+		console.log('userPairs:')
+		console.log(userPairs);
 		userPairs.forEach(pair => {
 			const convoQuery = `SELECT * FROM messages WHERE senderId IN (${pair.part1, pair.part2}) AND recipId IN (${pair.part1, pair.part2}) ORDER BY id DESC;`;
+			console.log(convoQuery);
 			db.query(convoQuery, (error, results) => {
 				if (error) {console.log(error)}
 				else {conversations.push(results)}
