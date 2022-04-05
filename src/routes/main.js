@@ -502,6 +502,8 @@ module.exports = function(app) {
 						}
 						partic1 = result[i].senderId;
 						partic2 = result[i].recipId;
+						console.log(`partic1: ${partic1}`);
+						console.log(`partic2: ${partic2}`);
 						convMessages.push(result[i]);
 						if (i = result.length - 1) {
 							conversations.push(convMessages);
