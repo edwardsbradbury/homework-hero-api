@@ -465,78 +465,57 @@ module.exports = function(app) {
 
 		/* Prepare SQL query to retrieve all rows from messages table where either sender or receiver matches userId,
 			trying to group together messages with the same participants	*/
-		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY recipId, senderId ORDER BY id DESC;';
-		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
-		const participantsQuery = 'SELECT DISTINCT LEAST(senderId, recipId) AS part1, GREATEST(senderId, recipId) AS part2 FROM messages WHERE senderId = ? OR recipId = ?;';
-		let userPairs = [];
-		// const convoQuery = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY recipId, senderId ORDER BY id DESC;';
-		let conversations = [];
-		db.query(participantsQuery, [userId, userId], (error, results) => {
-			if (error) {console.log(error)}
-			// else {userPairs.push(results)};
-			else {userPairs = results;}
-		})
-		console.log('userPairs:')
-		console.log(userPairs);
-		userPairs.forEach(pair => {
-			const convoQuery = `SELECT * FROM messages WHERE senderId IN (${pair.part1, pair.part2}) AND recipId IN (${pair.part1, pair.part2}) ORDER BY id DESC;`;
-			console.log(convoQuery);
-			db.query(convoQuery, (error, results) => {
-				if (error) {console.log(error)}
-				else {conversations.push(results)}
-			})
-		})
-		console.log(conversations);
+		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
 		// Execute query
-		// db.query(query, [userId, userId], (error, result) => {
-		// 	// Something's gone wrong
-		// 	if (error) {
-		// 		console.log(error);
-		// 		res.json({
-		// 			outcome: 'failure',
-		// 			error: 'SQL query error'
-		// 		})
-		// 	} else if (result.length < 1) {
-		// 		// Nothing went wrong but user has no messages (UI will handle empty array)
-		// 		res.json({
-		// 			outcome: 'success',
-		// 			conversations: result
-		// 		})
-		// 	} else {
-		// 		console.log('Result:');
-		// 		console.log(result);
-		// 		// Sort the array of messages into sub-arrays of conversations
-		// 		let conversations = [];
-		// 		let convMessages = [];
-		// 		let partic1 = result[0].senderId;
-		// 		let partic2 = result[0].recipId;
-		// 		console.log(`partic1: ${partic1}`);
-		// 		console.log(`partic2: ${partic2}`);
-		// 		for (let i = 0; i < result.length; i++) {
-		// 			if ((result[i].senderId === partic1 || result[i].senderId === partic2) && (result[i].recipId === partic1 || result[i].recipId === partic2)) {
-		// 				convMessages.push(result[i]);
-		// 			} else {
-		// 				if (convMessages.length > 0) {
-		// 					conversations.push(convMessages);
-		// 					convMessages = [];
-		// 				}
-		// 				partic1 = result[i].senderId;
-		// 				partic2 = result[i].recipId;
-		// 				console.log(`partic1: ${partic1}`);
-		// 				console.log(`partic2: ${partic2}`);
-		// 				convMessages.push(result[i]);
-		// 				if (i === result.length - 1) {
-		// 					conversations.push(convMessages);
-		// 				}
-		// 			}
-		// 		}
-		// 		// Send the array of conversations (subarrays of messages) back to UI
-		// 		res.json({
-		// 			outcome: 'success',
-		// 			conversations: conversations
-		// 		})
-		// 	}
-		// })
+		db.query(query, [userId, userId], (error, result) => {
+			// Something's gone wrong
+			if (error) {
+				console.log(error);
+				res.json({
+					outcome: 'failure',
+					error: 'SQL query error'
+				})
+			} else if (result.length < 1) {
+				// Nothing went wrong but user has no messages (UI will handle empty array)
+				res.json({
+					outcome: 'success',
+					conversations: result
+				})
+			} else {
+				console.log('Result:');
+				console.log(result);
+				// Sort the array of messages into sub-arrays of conversations
+				let conversations = [];
+				let convMessages = [];
+				let partic1 = result[0].senderId;
+				let partic2 = result[0].recipId;
+				console.log(`partic1: ${partic1}`);
+				console.log(`partic2: ${partic2}`);
+				for (let i = 0; i < result.length; i++) {
+					if ((result[i].senderId === partic1 || result[i].senderId === partic2) && (result[i].recipId === partic1 || result[i].recipId === partic2)) {
+						convMessages.push(result[i]);
+					} else {
+						if (convMessages.length > 0) {
+							conversations.push(convMessages);
+							convMessages = [];
+						}
+						partic1 = result[i].senderId;
+						partic2 = result[i].recipId;
+						console.log(`partic1: ${partic1}`);
+						console.log(`partic2: ${partic2}`);
+						convMessages.push(result[i]);
+						if (i === result.length - 1) {
+							conversations.push(convMessages);
+						}
+					}
+				}
+				// Send the array of conversations (subarrays of messages) back to UI
+				res.json({
+					outcome: 'success',
+					conversations: conversations
+				})
+			}
+		})
 	
 
 	})
