@@ -465,7 +465,8 @@ module.exports = function(app) {
 
 		/* Prepare SQL query to retrieve all rows from messages table where either sender or receiver matches userId,
 			trying to group together messages with the same participants	*/
-		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
+		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
+		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY senderId DESC, recipId DESC;';
 		// Execute query
 		db.query(query, [userId, userId], (error, result) => {
 			// Something's gone wrong
