@@ -465,8 +465,7 @@ module.exports = function(app) {
 
 		/* Prepare SQL query to retrieve all rows from messages table where either sender or receiver matches userId,
 			trying to group together messages with the same participants	*/
-		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
-		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY senderId DESC, recipId DESC;';
+		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
 		// Execute query
 		db.query(query, [userId, userId], (error, result) => {
 			// Something's gone wrong
@@ -483,38 +482,42 @@ module.exports = function(app) {
 					conversations: result
 				})
 			} else {
-				console.log('Result:');
-				console.log(result);
-				// Sort the array of messages into sub-arrays of conversations
-				let conversations = [];
-				let convMessages = [];
-				let partic1 = result[0].senderId;
-				let partic2 = result[0].recipId;
-				console.log(`partic1: ${partic1}`);
-				console.log(`partic2: ${partic2}`);
-				for (let i = 0; i < result.length; i++) {
-					if ((result[i].senderId === partic1 || result[i].senderId === partic2) && (result[i].recipId === partic1 || result[i].recipId === partic2)) {
-						convMessages.push(result[i]);
-					} else {
-						if (convMessages.length > 0) {
-							conversations.push(convMessages);
-							convMessages = [];
-						}
-						partic1 = result[i].senderId;
-						partic2 = result[i].recipId;
-						console.log(`partic1: ${partic1}`);
-						console.log(`partic2: ${partic2}`);
-						convMessages.push(result[i]);
-						if (i === result.length - 1) {
-							conversations.push(convMessages);
-						}
-					}
-				}
-				// Send the array of conversations (subarrays of messages) back to UI
-				res.json({
-					outcome: 'success',
-					conversations: conversations
-				})
+				const userIds = result.map(message => ({partic1: message.senderId, partic2: message.recipId}))
+				let userPairs = new Set(userIds);
+				consolele.log(userPairs);
+				/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				// console.log('Result:');
+				// console.log(result);
+				// // Sort the array of messages into sub-arrays of conversations
+				// let conversations = [];
+				// let convMessages = [];
+				// let partic1 = result[0].senderId;
+				// let partic2 = result[0].recipId;
+				// console.log(`partic1: ${partic1}`);
+				// console.log(`partic2: ${partic2}`);
+				// for (let i = 0; i < result.length; i++) {
+				// 	if ((result[i].senderId === partic1 || result[i].senderId === partic2) && (result[i].recipId === partic1 || result[i].recipId === partic2)) {
+				// 		convMessages.push(result[i]);
+				// 	} else {
+				// 		if (convMessages.length > 0) {
+				// 			conversations.push(convMessages);
+				// 			convMessages = [];
+				// 		}
+				// 		partic1 = result[i].senderId;
+				// 		partic2 = result[i].recipId;
+				// 		console.log(`partic1: ${partic1}`);
+				// 		console.log(`partic2: ${partic2}`);
+				// 		convMessages.push(result[i]);
+				// 		if (i === result.length - 1) {
+				// 			conversations.push(convMessages);
+				// 		}
+				// 	}
+				// }
+				// // Send the array of conversations (subarrays of messages) back to UI
+				// res.json({
+				// 	outcome: 'success',
+				// 	conversations: conversations
+				// })
 			}
 		})
 	
