@@ -484,7 +484,7 @@ module.exports = function(app) {
 			} else {
 				const userIds = result.map(message => ({partic1: message.senderId, partic2: message.recipId}))
 				let userPairs = new Set(userIds);
-				consolele.log(userPairs);
+				console.log(userPairs);
 				/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				// console.log('Result:');
 				// console.log(result);
