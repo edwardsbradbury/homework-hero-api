@@ -483,8 +483,8 @@ module.exports = function(app) {
 				})
 			} else {
 				// const userIds = result.map(message => ({partic1: message.senderId, partic2: message.recipId}))
-				let userPairs = new Set();
-				result.forEach(message => userPairs.add(`${message.senderId},${message.recipId}`));
+				let correspondents = new Set();
+				result.forEach(message => correspondents.add(message.senderId === userId ? recipId : senderId));
 				console.log(userPairs);
 				/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				// console.log('Result:');
