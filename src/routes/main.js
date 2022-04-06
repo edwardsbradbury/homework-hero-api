@@ -465,8 +465,8 @@ module.exports = function(app) {
 
 		/* Prepare SQL query to retrieve all rows from messages table where either sender or receiver matches userId,
 			trying to group together messages with the same participants	*/
-		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
-		const query = 'SELECT DISTINCT senderId, recipId FROM messages WHERE senderId = ? OR recipId = ?;';
+		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
+		// const query = 'SELECT DISTINCT senderId, recipId FROM messages WHERE senderId = ? OR recipId = ?;';
 		// Execute query
 		db.query(query, [userId, userId], (error, result) => {
 			// Something's gone wrong
@@ -483,10 +483,16 @@ module.exports = function(app) {
 					conversations: result
 				})
 			} else {
-				// const userIds = result.map(message => ({partic1: message.senderId, partic2: message.recipId}))
-				// let correspondents = new Set();
+				let correspondents = new Set();
 				// result.forEach(message => correspondents.add(message.senderId === userId ? message.recipId : message.senderId));
-				// console.log(correspondents);
+				for (let message of result) {
+					if (message.senderId === userId) {
+						correspondents.add(message.recipId);
+					} else if (message.recipId === userId) {
+						correspondents.add(message.senderId);
+					}
+				}
+				console.log(correspondents);
 				/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				console.log('Result:');
 				console.log(result);
