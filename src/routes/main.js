@@ -387,11 +387,84 @@ module.exports = function(app) {
 
 	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/* For the sake of sorting messages into conversations when fetching all of a user's messages and also for the sake of only refetching
+		messages in the current conversation when a user sends reply to an ongoing conversation, the messages table needs a conversation id
+		property.
+		
+		My React UI needs some means of determining whether a message is the beginning of a new conversation or reply to an existing one, so
+		that the correct convId is supplied with a request to /new_message route below */
+
+	app.get('/get_conv_id', isAuth,
+
+		function(req, res) {
+			
+			// partic1 is the userId of the user logged in and sending requests fron UI
+			const partic1 = req.sanitize(req.query.userId);
+			// partic2 is the user who partic1 is sending a message to
+			const partic2 = req.sanitize(req.query.recipId);
+
+			// Can't establish whether these users already have an existing dialogue if don't have IDs of both participants
+			if ((!(partic1 && partic2)) || partic1 < 1 || partic2 < 1) {
+				res.json(
+					{
+						outcome: 'failure'
+					}
+				)
+			} else {
+				// Query to check whether there are any messages between these 2 users and if so, select the convIDs
+				const query = 'SELECT convId FROM messages WHERE (senderId = ? OR senderId = ?) AND (recipId = ? OR recipId);';
+				const params = [partic1, partic2, partic1, partic2];
+				db.query(query, params, (error, result) => {
+					if (error) {
+						console.log(error);
+						res.json(
+							{
+								outcome: 'failure'
+							}
+						)
+					} else if (result.length > 1) {
+						// These 2 users have messaged before so I can extract a convId and send back to UI
+						res.json(
+							{
+								outcome: 'success',
+								convId: result[0].convId
+							}
+						)
+					} else {
+						/* These 2 users have never previously messaged, so retrieve the requesting user's last convId, increment and
+							send it back to UI to include when sending a new message */
+						const queryLastId = 'SELECT GREATEST(convId) AS lastId FROM messages WHERE senderId = ? or recipId = ?;';
+						db.query(queryLastId, [partic1, partic1], (err, response) => {
+							if (err) {console.log(err)
+							} else if (response.length < 1) {
+								res.json(
+									{
+										outcome: 'failure'
+									}
+								)
+							} else {
+								res.json(
+									{
+										outcome: 'success',
+										convId: response[0].lastId + 1
+									}
+								)
+							}
+						})
+					}
+				})
+			}
+		}
+	)
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Save a new message to the database
 
 	app.post('/new_message', isAuth,
 	
 		// Check data from frontend using validators
+		[check('convId').isInt({min: 1}).withMessage('Invalid conversation id')],
 		[check('sender').isInt({min: 1}).withMessage('Invalid sender id')],
 		[check('recipient').isInt({min: 1}).withMessage('Invalid recipient id')],
 		[check('sent').isISO8601().withMessage('Invalid sent date')],
@@ -421,18 +494,19 @@ module.exports = function(app) {
 			} else if (dateSentInvalid) {
 				res.json(
 					{
-					outcome: 'failure',
-					error: 'Invalid sent date'
+						outcome: 'failure',
+						error: 'Invalid sent date'
 				});
 			} else {
 				
 				// Data passed validation. Sanitize it and prepare SQL parameterised query
-				let query = 'INSERT INTO messages(senderId, recipId, sent, message) VALUES(?, ?, ?, ?);';
+				let query = 'INSERT INTO messages(convId, senderId, recipId, sent, message) VALUES(?, ?, ?, ?, ?);';
+				const convId = req.sanitize(req.body.convId);
 				const sender = req.sanitize(req.body.sender);
 				const recipient = req.sanitize(req.body.recipient);
 				const sent = req.sanitize(req.body.sent);
 				const message = req.sanitize(req.body.message);
-				const newMessage = [sender, recipient, sent, message];
+				const newMessage = [convId, sender, recipient, sent, message];
 
 				// Execute query
 				db.query(query, newMessage, (error) => {
@@ -464,9 +538,8 @@ module.exports = function(app) {
 		const userId = req.sanitize(req.query.userId);
 
 		/* Prepare SQL query to retrieve all rows from messages table where either sender or receiver matches userId,
-			trying to group together messages with the same participants	*/
-		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
-		// const query = 'SELECT DISTINCT senderId, recipId FROM messages WHERE senderId = ? OR recipId = ?;';
+			trying to group together messages with the same convId	*/
+		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY convId ORDER BY id DESC;';
 		// Execute query
 		db.query(query, [userId, userId], (error, result) => {
 			// Something's gone wrong
@@ -483,53 +556,32 @@ module.exports = function(app) {
 					conversations: result
 				})
 			} else {
-				let correspondents = new Set();
-				// result.forEach(message => correspondents.add(message.senderId === userId ? message.recipId : message.senderId));
-				for (let message of result) {
-					if (message.senderId === userId) {
-						correspondents.add(message.recipId);
-					} else if (message.recipId === userId) {
-						correspondents.add(message.senderId);
-					}
-				}
-				console.log(correspondents);
-				/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				// Should now have an array of all the user's messages to/from any other users, grouped by convId
 				console.log('Result:');
 				console.log(result);
-				// // Sort the array of messages into sub-arrays of conversations
-				// let conversations = [];
-				// let convMessages = [];
-				// let partic1 = result[0].senderId;
-				// let partic2 = result[0].recipId;
-				// console.log(`partic1: ${partic1}`);
-				// console.log(`partic2: ${partic2}`);
-				// for (let i = 0; i < result.length; i++) {
-				// 	if ((result[i].senderId === partic1 || result[i].senderId === partic2) && (result[i].recipId === partic1 || result[i].recipId === partic2)) {
-				// 		convMessages.push(result[i]);
-				// 	} else {
-				// 		if (convMessages.length > 0) {
-				// 			conversations.push(convMessages);
-				// 			convMessages = [];
-				// 		}
-				// 		partic1 = result[i].senderId;
-				// 		partic2 = result[i].recipId;
-				// 		console.log(`partic1: ${partic1}`);
-				// 		console.log(`partic2: ${partic2}`);
-				// 		convMessages.push(result[i]);
-				// 		if (i === result.length - 1) {
-				// 			conversations.push(convMessages);
-				// 		}
-				// 	}
-				// }
-				// // Send the array of conversations (subarrays of messages) back to UI
-				// res.json({
-				// 	outcome: 'success',
-				// 	conversations: conversations
-				// })
+				// Sort the array of messages into sub-arrays of conversations
+				let conversations = [];
+				let convMessages = [];
+				let convId = result[0].convId;
+				result.forEach(message => {
+					if (message.convId === convId) {
+						convMessages.push(message);
+					} else {
+						conversations.push(convMessages);
+						convId = message.convId;
+						convMessages = [];
+						convMessages.push(message);
+					}
+				});
+				conversations.push(convMessages);
+				// Send the array of conversations (subarrays of messages) back to UI
+				res.json({
+					outcome: 'success',
+					conversations: conversations
+				})
 			}
 		})
-	
-
+		
 	})
 	
 
