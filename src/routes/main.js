@@ -439,14 +439,15 @@ module.exports = function(app) {
 							} else if (response.length < 1) {
 								res.json(
 									{
-										outcome: 'failure'
+										outcome: 'success',
+										convId: 1
 									}
 								)
 							} else {
 								res.json(
 									{
 										outcome: 'success',
-										convId: response[0].lastId + 1
+										convId: ++response[0].lastId
 									}
 								)
 							}
