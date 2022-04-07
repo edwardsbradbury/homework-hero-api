@@ -437,6 +437,7 @@ module.exports = function(app) {
 						db.query(queryLastId, [partic1, partic1], (err, response) => {
 							if (err) {console.log(err)
 							} else if (response.length < 1) {
+								// User has absolutely no conversations yet; return convId 1 to UI
 								res.json(
 									{
 										outcome: 'success',
@@ -444,6 +445,7 @@ module.exports = function(app) {
 									}
 								)
 							} else {
+								// User has at least 1 conversation; return last convId incremented by 1
 								res.json(
 									{
 										outcome: 'success',
