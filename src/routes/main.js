@@ -412,7 +412,7 @@ module.exports = function(app) {
 				)
 			} else {
 				// Query to check whether there are any messages between these 2 users and if so, select the convIDs
-				const query = 'SELECT convId FROM messages WHERE (senderId = ? OR senderId = ?) AND (recipId = ? OR recipId);';
+				const query = 'SELECT convId FROM messages WHERE (senderId = ? OR senderId = ?) AND (recipId = ? OR recipId = ?);';
 				const params = [partic1, partic2, partic1, partic2];
 				db.query(query, params, (error, result) => {
 					if (error) {
