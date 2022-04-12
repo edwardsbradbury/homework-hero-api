@@ -432,6 +432,7 @@ module.exports = function(app) {
 							}
 						)
 					} else {
+						console.log(result);
 						/* These 2 users have never previously messaged, so retrieve the requesting user's last convId, increment and
 							send it back to UI to include when sending a new message */
 						const queryLastId = 'SELECT MAX(convId) AS lastId FROM messages WHERE senderId = ? or recipId = ?;';
