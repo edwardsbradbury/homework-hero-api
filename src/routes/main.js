@@ -423,6 +423,7 @@ module.exports = function(app) {
 							}
 						)
 					} else if (result.length > 1) {
+						console.log(result);
 						// These 2 users have messaged before so I can extract a convId and send back to UI
 						res.json(
 							{
@@ -559,10 +560,8 @@ module.exports = function(app) {
 					conversations: result
 				})
 			} else {
-				// Should now have an array of all the user's messages to/from any other users, grouped by convId
-				console.log('Result:');
-				console.log(result);
-				// Sort the array of messages into sub-arrays of conversations
+				/* Should now have an array of all the user's messages to/from any other users, grouped by convId.
+					 Sort the array of messages into sub-arrays of conversations */
 				let conversations = [];
 				let convMessages = [];
 				let convId = result[0].convId;
