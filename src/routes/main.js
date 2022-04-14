@@ -422,7 +422,7 @@ module.exports = function(app) {
 								outcome: 'failure'
 							}
 						)
-					} else if (result.length > 1) {
+					} else if (result.length > 0) {
 						console.log(result);
 						// These 2 users have messaged before so I can extract a convId and send back to UI
 						res.json(
