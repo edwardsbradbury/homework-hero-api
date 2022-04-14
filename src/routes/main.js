@@ -423,7 +423,8 @@ module.exports = function(app) {
 							}
 						)
 					} else if (result.length > 0) {
-						console.log(result);
+						console.log('Line 426');
+						// console.log(result);
 						// These 2 users have messaged before so I can extract a convId and send back to UI
 						res.json(
 							{
