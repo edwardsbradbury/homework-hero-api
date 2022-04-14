@@ -470,8 +470,9 @@ module.exports = function(app) {
 	
 		// Check data from frontend using validators
 		[check('convId').isInt({min: 1}).withMessage('Invalid conversation id')],
-		[check('sender').isInt({min: 1}).withMessage('Invalid sender id')],
-		[check('recipient').isInt({min: 1}).withMessage('Invalid recipient id')],
+		[check('senderId').isInt({min: 1}).withMessage('Invalid sender id')],
+		[check('recipId').isInt({min: 1}).withMessage('Invalid recipient id')],
+		[check('senderName').matches(nameRegex).withMessage('Invalid sender name')],
 		[check('sent').isISO8601().withMessage('Invalid sent date')],
 		[check('message').isLength({min: 2, max: 500}).withMessage('Invalid message length')],
 		
@@ -505,13 +506,14 @@ module.exports = function(app) {
 			} else {
 				
 				// Data passed validation. Sanitize it and prepare SQL parameterised query
-				let query = 'INSERT INTO messages(convId, senderId, recipId, sent, message) VALUES(?, ?, ?, ?, ?);';
+				let query = 'INSERT INTO messages(convId, senderId, recipId, senderName, sent, message) VALUES(?, ?, ?, ?, ?, ?);';
 				const convId = req.sanitize(req.body.convId);
-				const sender = req.sanitize(req.body.sender);
-				const recipient = req.sanitize(req.body.recipient);
+				const senderId = req.sanitize(req.body.senderId);
+				const recipId = req.sanitize(req.body.recipId);
+				const senderName = req.sanitize(req.body.senderName);
 				const sent = req.sanitize(req.body.sent);
 				const message = req.sanitize(req.body.message);
-				const newMessage = [convId, sender, recipient, sent, message];
+				const newMessage = [convId, senderId, recipId, senderName, sent, message];
 
 				// Execute query
 				db.query(query, newMessage, (error) => {
