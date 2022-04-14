@@ -422,10 +422,7 @@ module.exports = function(app) {
 								outcome: 'failure'
 							}
 						)
-					// } else if (result.length > 0) {
 					} else if (result[0].convId !== null) {
-						console.log('Line 426');
-						// console.log(result);
 						// These 2 users have messaged before so I can extract a convId and send back to UI
 						res.json(
 							{
@@ -434,8 +431,6 @@ module.exports = function(app) {
 							}
 						)
 					} else {
-						// console.log(result);
-						console.log('Users have no prior conversations');
 						/* These 2 users have never previously messaged, so retrieve the requesting user's last convId, increment and
 							send it back to UI to include when sending a new message */
 						const queryLastId = 'SELECT MAX(convId) AS lastId FROM messages WHERE senderId = ? OR recipId = ?;';
@@ -566,6 +561,8 @@ module.exports = function(app) {
 					conversations: result
 				})
 			} else {
+				console.log('line 564');
+				console.log(result);
 				/* Should now have an array of all the user's messages to/from any other users, grouped by convId.
 					 Sort the array of messages into sub-arrays of conversations */
 				let conversations = [];
@@ -582,6 +579,8 @@ module.exports = function(app) {
 					}
 				});
 				conversations.push(convMessages);
+				console.log('line 582');
+				console.log(conversations);
 				// Send the array of conversations (subarrays of messages) back to UI
 				res.json({
 					outcome: 'success',
