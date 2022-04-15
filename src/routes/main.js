@@ -584,7 +584,7 @@ module.exports = function(app) {
 				let convIds = new Set();
 				result.forEach(message => convIds.add(message.convId));
 				// let conversations = convIds.forEach(convId => result.filter(message => message.convId === convId));
-				let conversations = Arra.from(convIds).map(convId => result.filter(message => message.convId === convId));
+				let conversations = Array.from(convIds).map(convId => result.filter(message => message.convId === convId));
 				//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				console.log('line 582');
 				console.log(conversations);
