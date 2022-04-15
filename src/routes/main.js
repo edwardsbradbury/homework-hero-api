@@ -542,9 +542,7 @@ module.exports = function(app) {
 		
 		const userId = req.sanitize(req.query.userId);
 
-		/* Prepare SQL query to retrieve all rows from messages table where either sender or receiver matches userId,
-			trying to group together messages with the same convId	*/
-		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY convId ORDER BY id DESC;';
+		// Prepare SQL query to retrieve all rows from messages table where either sender or receiver matches userId
 		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
 		// Execute query
 		db.query(query, [userId, userId], (error, result) => {
@@ -562,32 +560,11 @@ module.exports = function(app) {
 					conversations: result
 				})
 			} else {
-				console.log('line 564');
-				console.log(result);
-				/* Should now have an array of all the user's messages to/from any other users, grouped by convId.
-					 Sort the array of messages into sub-arrays of conversations */
-				// let conversations = [];
-				// let convMessages = [];
-				// let convId = result[0].convId;
-				// result.forEach(message => {
-				// 	if (message.convId === convId) {
-				// 		convMessages.push(message);
-				// 	} else {
-				// 		conversations.push(convMessages);
-				// 		convId = message.convId;
-				// 		convMessages = [];
-				// 		convMessages.push(message);
-				// 	}
-				// });
-				// conversations.push(convMessages);
-				//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				// For purposes of sorting messages into distinct conversations, need to know the unique convIds found in the results from database
 				let convIds = new Set();
 				result.forEach(message => convIds.add(message.convId));
-				// let conversations = convIds.forEach(convId => result.filter(message => message.convId === convId));
+				// For each unique convId, create an array of messages with that convId
 				let conversations = Array.from(convIds).map(convId => result.filter(message => message.convId === convId));
-				//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				console.log('line 582');
-				console.log(conversations);
 				// Send the array of conversations (subarrays of messages) back to UI
 				res.json({
 					outcome: 'success',
