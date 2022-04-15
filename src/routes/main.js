@@ -431,10 +431,11 @@ module.exports = function(app) {
 							}
 						)
 					} else {
-						/* These 2 users have never previously messaged, so retrieve the requesting user's last convId, increment and
-							send it back to UI to include when sending a new message */
-						const queryLastId = 'SELECT MAX(convId) AS lastId FROM messages WHERE senderId = ? OR recipId = ?;';
-						db.query(queryLastId, [partic1, partic1], (err, response) => {
+						/* These 2 users have never previously messaged and I want to avoid duplicate convIds between different pairs of users.
+								Selecting and incrementing the max convId of any conversation either user already has ongoing should ensure that neither
+								user can have a new conversation with a duplicate convId */
+						const queryLastId = 'SELECT MAX(convId) AS lastId FROM messages WHERE senderId = ? OR senderId = ? OR recipId = ? OR recipId = ?;';
+						db.query(queryLastId, [partic1, partic2, partic1, partic2], (err, response) => {
 							if (err) {console.log(err)
 							} else if (response.length < 1) {
 								// User has absolutely no conversations yet; return convId 1 to UI
@@ -543,7 +544,7 @@ module.exports = function(app) {
 		const userId = req.sanitize(req.query.userId);
 
 		// Prepare SQL query to retrieve all rows from messages table where either sender or receiver matches userId
-		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
+		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY convId DESC, id DESC;';
 		// Execute query
 		db.query(query, [userId, userId], (error, result) => {
 			// Something's gone wrong
