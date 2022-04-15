@@ -563,7 +563,7 @@ module.exports = function(app) {
 				// For purposes of sorting messages into distinct conversations, need to know the unique convIds found in the results from database
 				let convIds = new Set();
 				result.forEach(message => convIds.add(message.convId));
-				// For each unique convId, create an array of messages with that convId
+				// For each unique convId, create an array of messages with that convId & hold these arrays in the conversations array
 				let conversations = Array.from(convIds).map(convId => result.filter(message => message.convId === convId));
 				// Send the array of conversations (subarrays of messages) back to UI
 				res.json({
