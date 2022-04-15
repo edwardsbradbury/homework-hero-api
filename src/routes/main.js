@@ -544,7 +544,8 @@ module.exports = function(app) {
 
 		/* Prepare SQL query to retrieve all rows from messages table where either sender or receiver matches userId,
 			trying to group together messages with the same convId	*/
-		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY convId ORDER BY id DESC;';
+		// const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? GROUP BY convId ORDER BY id DESC;';
+		const query = 'SELECT * FROM messages WHERE senderId = ? OR recipId = ? ORDER BY id DESC;';
 		// Execute query
 		db.query(query, [userId, userId], (error, result) => {
 			// Something's gone wrong
@@ -565,20 +566,26 @@ module.exports = function(app) {
 				console.log(result);
 				/* Should now have an array of all the user's messages to/from any other users, grouped by convId.
 					 Sort the array of messages into sub-arrays of conversations */
+				// let conversations = [];
+				// let convMessages = [];
+				// let convId = result[0].convId;
+				// result.forEach(message => {
+				// 	if (message.convId === convId) {
+				// 		convMessages.push(message);
+				// 	} else {
+				// 		conversations.push(convMessages);
+				// 		convId = message.convId;
+				// 		convMessages = [];
+				// 		convMessages.push(message);
+				// 	}
+				// });
+				// conversations.push(convMessages);
+				//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				let convIds = new Set();
+				result.forEach(message => convIds.add(message.convId));
 				let conversations = [];
-				let convMessages = [];
-				let convId = result[0].convId;
-				result.forEach(message => {
-					if (message.convId === convId) {
-						convMessages.push(message);
-					} else {
-						conversations.push(convMessages);
-						convId = message.convId;
-						convMessages = [];
-						convMessages.push(message);
-					}
-				});
-				conversations.push(convMessages);
+				convIds.forEach(convId => result.filter(message => message.convId === convId));
+				//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				console.log('line 582');
 				console.log(conversations);
 				// Send the array of conversations (subarrays of messages) back to UI
