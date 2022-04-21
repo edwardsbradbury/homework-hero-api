@@ -344,14 +344,14 @@ module.exports = function(app) {
 					} else {
 						res.json({
 							outcome: 'success',
-							result: result
+							users: result
 						})
 					}
 				})
 			}
 		})
 
-		
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route to search the database for members (either tutors or clients) based on subject and/or level of study parameters
 
