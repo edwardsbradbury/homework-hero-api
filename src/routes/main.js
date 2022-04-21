@@ -332,7 +332,7 @@ module.exports = function(app) {
 					error: 'invalid userType'
 				})
 			} else {
-				const query = 'SELECT * FROM users WHERE userType = ?;';
+				const query = 'SELECT * FROM usersubjectlevel WHERE userType = ?;';
 				const param = [req.query.userType === 'client' ? 'tutor' : 'client'];
 				db.query(query, param, (error, result) => {
 					if (error) {
