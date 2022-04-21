@@ -314,6 +314,44 @@ module.exports = function(app) {
 			}
 	})
 
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Route to retrieve all tutors if requesting user is a client and all clients if requesting user is a tutor
+
+	app.get('/all_users',
+
+		// Check userType is valid
+		[check('userType').isIn(['client', 'tutor'])],
+		
+		function (req, res) {
+
+			const errors = validationResult(req);
+			if (!errors.isEmpty()) {
+				res.json({
+					outcome: 'failure',
+					error: 'invalid userType'
+				})
+			} else {
+				const query = 'SELECT * FROM users WHERE userType = ?;';
+				const param = [req.query.userType === 'client' ? 'tutor' : 'client'];
+				db.query(query, param, (error, result) => {
+					if (error) {
+						console.log(error);
+						res.json({
+							outcome: 'failure',
+							error: 'SQL query error'
+						})
+					} else {
+						res.json({
+							outcome: 'success',
+							result: result
+						})
+					}
+				})
+			}
+		})
+
+		
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Route to search the database for members (either tutors or clients) based on subject and/or level of study parameters
 
