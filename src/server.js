@@ -39,7 +39,7 @@ app.use(cors({
         credentials: true,
         origin: 'https://www.homework-hero.co.uk',
         preflightContinue: true,
-        methods: ['GET', 'POST', 'DELETE'],
+        methods: ['GET', 'POST', 'PUT', 'DELETE'],
 }))
 
 // Middleware to make req.sanitize command available within route callback functions
