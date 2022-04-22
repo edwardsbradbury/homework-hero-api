@@ -351,78 +351,6 @@ module.exports = function(app) {
 			}
 		})
 
-
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Route to search the database for members (either tutors or clients) based on subject and/or level of study parameters
-
-	app.post('/search',
-
-		// Basic validation of data from frontend
-		[check('userType').isIn(['client', 'tutor'])],
-		[check('subject').isIn(subjects)],
-
-		function (req, res) {
-
-			// If any data failed validation, send error message back to frontend
-			const errors = validationResult(req);
-			if (!errors.isEmpty()) {
-				res.json({
-					oucome: 'failure',
-					error: 'Invalid data'
-				})
-			} else {
-
-				const type = req.sanitize(req.body.userType);
-				const subject = req.sanitize(req.body.subject);
-				const level = req.sanitize(req.body.level);
-
-				// If the user's a client, search needs to return tutors and if user's a tutor, search should return clients
-				let findThese = type === 'client' ? 'tutor' : 'client';
-				let sqlQuery = `SELECT * FROM usersubjectlevel WHERE userType = '${findThese}' AND `;
-				let params = [];
-
-				// If user's a client, need to search for tutors teaching at appropriate level
-				if (type === 'client') {
-					// Hence if either value is missing or unrecognised, return error to UI
-					if (!(subject && level) || !subjects.includes(subject)) {
-						res.json({
-							outcome: 'failure',
-							error: 'Missing search param'
-						})
-					} else {
-						// Finish writing SQL paramaterised query
-						sqlQuery += 'subject = ? AND level = ?;';
-						params.push(subject, level);
-					}
-				} else if (type === 'tutor' && (subject && level)) {
-					// Tutors can search for clients who need teaching to a particular level in a subject
-					sqlQuery += 'subject = ? AND level = ?;';
-					params.push(subject, level);
-				} else {
-					// Or they can search for all clients needing help at all levels in a particular subject
-					sqlQuery += 'subject = ?;';
-					params.push(subject);
-				}
-				db.query(sqlQuery, params, (err, result) => {
-					if (err) console.log(err);
-					else if (result.length < 1) {
-						// No users matched search criteria
-						res.json({
-							outcome: 'success',
-							result: 'Nothing found'
-						})
-					} else {
-						// Send results to UI
-						res.json({
-							outcome: 'success',
-							result: result
-						});
-					}
-				})
-			}
-		}
-	)
-
 	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/* For the sake of sorting messages into conversations when fetching all of a user's messages and also for the sake of only refetching
@@ -613,30 +541,46 @@ module.exports = function(app) {
 		})
 
 	})
-	
 
-	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// // Retrieve an updated (when a new reply has been sent) list of messages in a conversation and send back to the React UI
 
-	// app.get('/messages', isAuth, function (req, res) {
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Route for marking messages in a chat as read
 
-	// 	const username = req.sanitize(req.query.username);
-	// 	const requestId = req.sanitize(req.query.requestId);
-	// 	const query = 'SELECT * FROM messages WHERE requestId = ? AND (sender = ? OR recipient = ?);';
+	app.put('/mark_as_read/:userId/:convId', isAuth,
+		
+		[check('userId').isInt({min: 1}).withMessage('Invalid user id')],
+		[check('convId').isInt({min: 1}).withMessage('Invalid conv id')],
 
-	// 	db.query(query, [requestId, username, username], (error, result) => {
-	// 		if (error) {
-	// 			console.log("Error getting messages in chat from database");
-	// 			res.send(['generalError']);
-	// 		} else if (result.length < 1) {
-	// 			res.send(['noMessages'])
-	// 		} else {
-	// 			res.send(result);
-	// 		}
-	// 	})
+		function (req, res) {
 
-	// })
+			const errors = validationResult(req);
+			if (!errors.isEmpty()) {
+				let errs = [];
+				errors.errors.forEach(anErr => errs.push(anErr.msg));
+				res.json({
+					outcome: 'failure',
+					errors: errs
+				})
+			} else {
+				const userId = req.params.userId;
+				const convId = req.params.convId;
+				const query = 'UPDATE messages SET isRead = 1 WHERE recipId = ? AND convId = ?;';
+				db.query(query, [userId, convId], (err, result) => {
+					if (err) {
+						console.log(err);
+						res.json({
+							outcome: 'failure',
+							error: 'failed to set messages as read'
+						})
+					} else {
+						res.json({
+							outcome: 'success'
+						})
+					}
+				})
+			}
 
+	})
 	
 	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// // Delete the message with the specified messageId
