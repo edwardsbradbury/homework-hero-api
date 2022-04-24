@@ -602,7 +602,7 @@ module.exports = function(app) {
 				})
 			} else {
 				const query = 'UPDATE messages SET senderDeleted = IF(senderId = ?, 1, 0), recipDeleted = IF(recipId = ?, 1, 0) WHERE id IN(?);';
-				db.query(query, [req.body.userId, req.body.userId, req.body.userIds], error => {
+				db.query(query, [req.body.userId, req.body.userId, ...req.body.messageIds], error => {
 					if (error) {
 						console.log(error);
 						res.json({
