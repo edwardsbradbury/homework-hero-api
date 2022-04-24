@@ -544,7 +544,7 @@ module.exports = function(app) {
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Route for marking messages in a chat as read
+	// Route for marking messages in a given conversation as read
 
 	app.put('/mark_as_read/:userId/:convId', isAuth,
 		
@@ -555,8 +555,7 @@ module.exports = function(app) {
 
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
-				let errs = [];
-				errors.errors.forEach(anErr => errs.push(anErr.msg));
+				const errs = errors.errors.map(anErr => errs.push(anErr.msg));
 				res.json({
 					outcome: 'failure',
 					errors: errs
@@ -581,23 +580,43 @@ module.exports = function(app) {
 			}
 
 	})
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Message table has columns senderDeleted and recipDeleted - this route is for setting those values
+
+	app.post('/mark_as_deleted', isAuth,
 	
-	// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// // Delete the message with the specified messageId
+		[check('userId').isInt({min: 1}).withMessage('Invalid user id')],
+		// [check('convId').isInt({min: 1}).withMessage('Invalid conv id')],
+		[check('messageIds').isArray({min: 1}).withMessage('Invalid messge ids')],
 
-	// app.delete('/delete-message/:id', isAuth, function (req, res) {
-	// 	const messageId = req.params.id;
-	// 	const query = 'DELETE FROM messages WHERE messageId = ?;';
+		function (req, res) {
 
-	// 	db.query(query, [messageId], (err, result) => {
-	// 		if (err) {
-	// 			console.log(err);
-	// 			res.send(['deletionFailed']);
-	// 		} else {
-	// 			res.send(['success']);
-	// 		}
-	// 	})
-	// })
+			const errors = validationResult(req);
+			if (!errors.isEmpty()) {
+				const errs = errors.errors.map(anErr => errs.push(anErr.msg));
+				res.json({
+					outcome: 'failure',
+					errors: errs
+				})
+			} else {
+				const query = 'UPDATE messages SET senderDeleted = IF(senderId = ?, 1, 0), recipDeleted = IF(recipId = ?, 1, 0) WHERE id IN(?);';
+				db.query(query, [req.body.userId, req.body.userId, ...req.body.userIds], error => {
+					if (error) {
+						console.log(error);
+						res.json({
+							outcome: 'failure'
+						})
+					} else {
+						res.json({
+							outcome: 'success'
+						})
+					}
+				})
+			}
+
+	})
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
