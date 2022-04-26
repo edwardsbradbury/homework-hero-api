@@ -588,7 +588,6 @@ module.exports = function(app) {
 	app.post('/mark_as_deleted', isAuth,
 	
 		[check('userId').isInt({min: 1}).withMessage('Invalid user id')],
-		// [check('convId').isInt({min: 1}).withMessage('Invalid conv id')],
 		[check('messageIds').isArray({min: 1}).withMessage('Invalid messge ids')],
 
 		function (req, res) {
